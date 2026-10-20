@@ -435,3 +435,9 @@ swap gerekir), /home'da 627 GB boş.
   fork'lar + `metroid-16.0` / `metroid-17.0` dalları: frameworks_base, Settings, SetupWizard, Telecomm, vendor_crdroid,
   Aperture; cihaz ağacı `16.0` / `17.0`. Anahtarlar, vendor blob'ları ve stok firmware yüklenmedi.
   Yerel kopya: `crdroid_metroid/`. ROM zip'leri (4,3 GB) GitHub'a sığmıyor → SourceForge (hesap bekleniyor).
+- **Görselleştirici (20 Eki, günün özelliği):** simülatörde telefonda canlı ayarlandı (tools/glyph-live + pc-audio.py), iki mod
+  ROM'a işlendi: Sabit (SpectrumBars, 25 frekans bandı, en yaygın ortada) ve Hareketli (VoiceWave, ayna kayan dalga);
+  müzik ve arama sesi için. Mod: Glyph Matrix → Müzik görselleştirme kutucuğu. OpenGlyph 725e4e8.
+- **A17-10 (22:09, güvenli/DEBUG=0):** `builds/crDroid-13.0-20261020-A17-10/` (sha256 00206ae9…). Telefona gönderildi, doğrulandı.
+  Internet Archive: https://archive.org/details/crdroid-metroid-17.0-20261020
+- Özellik listesi: `OZELLIKLER.md` (her gün 1–2 tane).

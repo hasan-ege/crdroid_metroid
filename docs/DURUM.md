@@ -424,3 +424,14 @@ swap gerekir), /home'da 627 GB boş.
   - Pil düşükken (ACTION_BATTERY_LOW) Her Zaman Açık kapanır, şarjda ya da pil toparlanınca geri gelir.
   - Her Zaman Açık oyuncağı seçilince etkin oyuncaklara eklenir (bildirim toast'ı).
   - Stokta default süre değeri bulunamadı; 15 sn en kısa seçenek olduğu için seçildi.
+- **20 Eki cihaz testi:** notlar `TEST-2026-10-20.md`. Gelen SMS modemden hiç gelmiyor (RIL'de `UNSOL_RESPONSE_NEW_SMS`
+  yok, uçak modu da düzeltmiyor). Kamera: kamera 4'te (mantıksal) HAL çökmesi, 60 fps'te kamera 0 (0,6× yok),
+  floresanda titreme. Glyph önizleme farkı: otomatik parlaklık ön ışık sensöründen okunuyordu.
+- **OpenGlyph 6f12cc8:** stok toy mantığı, arka ışık sensörü (parlaklık + cep modu), Mirror kamerayı uygulamalara
+  bırakıyor, pil: sensörler yalnızca matris etkinken, önizleme yalnızca görünürken.
+- **Settings (A17) 0005:** crDroid bağış hatırlatma bildirimi kapatıldı (saatte bir uyandırma alarmı kuruyordu).
+- **A17-8 (19:21):** `builds/crDroid-13.0-20261020-A17-8-debug/` (sha256 12a1d853…). /sdcard/Download'a gönderildi, doğrulandı.
+- **GitHub (public, hasan-ege):** `crdroid_metroid` (manifest'ler, yamalar, araçlar, notlar, BUILDS.md), `OpenGlyph`,
+  fork'lar + `metroid-16.0` / `metroid-17.0` dalları: frameworks_base, Settings, SetupWizard, Telecomm, vendor_crdroid,
+  Aperture; cihaz ağacı `16.0` / `17.0`. Anahtarlar, vendor blob'ları ve stok firmware yüklenmedi.
+  Yerel kopya: `crdroid_metroid/`. ROM zip'leri (4,3 GB) GitHub'a sığmıyor → SourceForge (hesap bekleniyor).

@@ -1,0 +1,47 @@
+From 460de3ad3f7ee4bfb0e74267130d2091f84dadad Mon Sep 17 00:00:00 2001
+From: hasan <hasan@localhost>
+Date: Sun, 18 Oct 2026 07:13:36 +0300
+Subject: [PATCH] metroid: drop uimlpaservice from the blob list
+
+The PRODUCT_PACKAGES filter-out in lineage_metroid.mk had no effect on the
+inherited vendor package list, so com.qualcomm.qti.lpa still shipped. Remove it
+from proprietary-files.txt instead (vendor makefiles regenerated).
+---
+ lineage_metroid.mk    | 5 -----
+ proprietary-files.txt | 4 +++-
+ 2 files changed, 3 insertions(+), 6 deletions(-)
+
+diff --git a/lineage_metroid.mk b/lineage_metroid.mk
+index 4afac11..1f5fd64 100644
+--- a/lineage_metroid.mk
++++ b/lineage_metroid.mk
+@@ -12,11 +12,6 @@ $(call inherit-product, device/nothing/metroid/device.mk)
+ # Keep only Nothing's stock AW86938/RichTap implementation.
+ PRODUCT_PACKAGES := $(filter-out vendor.qti.hardware.vibrator.service,$(PRODUCT_PACKAGES))
+ 
+-# The modem reports the embedded eSIM slot as empty, so Qualcomm's LPA service
+-# (com.qualcomm.qti.lpa) crashes with index -1 in uimLpaGetEid and shows
+-# "isn't responding". eSIM does not work on this build anyway; leave it out.
+-PRODUCT_PACKAGES := $(filter-out uimlpaservice,$(PRODUCT_PACKAGES))
+-
+ # Own release keys: vendor/lineage/config/common.mk already does
+ # "-include vendor/lineage-priv/keys/keys.mk". Including it here as well duplicated list
+ # variables such as PRODUCT_MAINLINE_SEPOLICY_DEV_CERTIFICATES and broke Soong.
+diff --git a/proprietary-files.txt b/proprietary-files.txt
+index 44b92f9..2cd9f67 100644
+--- a/proprietary-files.txt
++++ b/proprietary-files.txt
+@@ -128,7 +128,9 @@ system_ext/priv-app/qcrilmsgtunnel/qcrilmsgtunnel.apk
+ 
+ # eSIM
+ product/priv-app/EuiccGoogle/EuiccGoogle.apk;PRESIGNED
+-product/app/uimlpaservice/uimlpaservice.apk
++# uimlpaservice (com.qualcomm.qti.lpa) left out: crashes in uimLpaGetEid with the eSIM slot
++# reported empty, and eSIM does not work on this build.
++# product/app/uimlpaservice/uimlpaservice.apk
+ product/app/datastatusnotification/datastatusnotification.apk
+ product/lib64/libjni_aidl_service.so
+ system_ext/etc/permissions/vendor.qti.hardware.c2pa-V1-java.xml
+-- 
+2.56.0
+

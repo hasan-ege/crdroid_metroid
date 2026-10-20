@@ -1,0 +1,33 @@
+From 2d45f8786f6db2ce855816c8b02f3b8b248340fb Mon Sep 17 00:00:00 2001
+From: hasan <gungorbzk@gmail.com>
+Date: Tue, 20 Oct 2026 19:12:10 +0300
+Subject: [PATCH] Settings: no crDroid donation reminder notification
+
+The receiver posts a high-priority notification 30 minutes after boot and
+again every hour until it is tapped, arming a wake-up alarm each time, with
+no switch to turn it off. Disable it; donations stay on the About page.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ AndroidManifest.xml | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/AndroidManifest.xml b/AndroidManifest.xml
+index cb710488..6d19cc86 100644
+--- a/AndroidManifest.xml
++++ b/AndroidManifest.xml
+@@ -6405,8 +6405,10 @@
+                 <category android:name="android.intent.category.DEFAULT" />
+             </intent-filter>
+         </activity>
++        <!-- metroid: no hourly donation reminder (it re-arms a wake-up alarm every hour until
++             tapped, and Settings has no switch for it). The About page still links donations. -->
+         <receiver android:name="com.crdroid.settings.fragments.about.DonateReceiver"
+-            android:enabled="true"
++            android:enabled="false"
+             android:exported="false">
+             <intent-filter android:priority="1000">
+                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+-- 
+2.56.0
+

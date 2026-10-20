@@ -1,0 +1,28 @@
+From 494a131e922b154b76c349c017f047945cd81427 Mon Sep 17 00:00:00 2001
+From: hasan <hasan@localhost>
+Date: Sun, 18 Oct 2026 07:13:04 +0300
+Subject: [PATCH 1/2] config: drop DocumentsUIOverlay
+
+Ship the stock AOSP look of the Files app (DocumentsUI) without Lineage's
+Material 3 theme overlay.
+---
+ config/common.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/config/common.mk b/config/common.mk
+index b44172e..6c73d85 100644
+--- a/config/common.mk
++++ b/config/common.mk
+@@ -281,8 +281,8 @@ PRODUCT_PACKAGE_OVERLAYS += \
+     vendor/lineage/overlay/common \
+     vendor/lineage/overlay/no-rro
+ 
++# DocumentsUIOverlay (Material 3 theme for Files) left out on metroid: plain AOSP Files.
+ PRODUCT_PACKAGES += \
+-    DocumentsUIOverlay \
+     NetworkStackOverlay \
+     PermissionControllerOverlay
+ 
+-- 
+2.56.0
+

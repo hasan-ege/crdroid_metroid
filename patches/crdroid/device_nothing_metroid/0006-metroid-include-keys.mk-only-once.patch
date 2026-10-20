@@ -1,0 +1,31 @@
+From c27bc17d583d3919b8a596f223ba0adc8a131464 Mon Sep 17 00:00:00 2001
+From: hasan <hasan@localhost>
+Date: Sun, 18 Oct 2026 06:33:54 +0300
+Subject: [PATCH] metroid: include keys.mk only once
+
+vendor/lineage/config/common.mk already -includes vendor/lineage-priv/keys/keys.mk;
+inheriting it again doubled list variables (PRODUCT_MAINLINE_*_SEPOLICY_DEV_CERTIFICATES)
+and plat_mac_permissions.xml failed with a non-existent source path.
+---
+ lineage_metroid.mk | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/lineage_metroid.mk b/lineage_metroid.mk
+index 9c7e31e..4afac11 100644
+--- a/lineage_metroid.mk
++++ b/lineage_metroid.mk
+@@ -17,8 +17,9 @@ PRODUCT_PACKAGES := $(filter-out vendor.qti.hardware.vibrator.service,$(PRODUCT_
+ # "isn't responding". eSIM does not work on this build anyway; leave it out.
+ PRODUCT_PACKAGES := $(filter-out uimlpaservice,$(PRODUCT_PACKAGES))
+ 
+-# Sign with our own release keys, not AOSP's public testkey (anyone can forge updates for that).
+-$(call inherit-product-if-exists, vendor/lineage-priv/keys/keys.mk)
++# Own release keys: vendor/lineage/config/common.mk already does
++# "-include vendor/lineage-priv/keys/keys.mk". Including it here as well duplicated list
++# variables such as PRODUCT_MAINLINE_SEPOLICY_DEV_CERTIFICATES and broke Soong.
+ 
+ PRODUCT_NAME := lineage_metroid
+ PRODUCT_DEVICE := metroid
+-- 
+2.56.0
+

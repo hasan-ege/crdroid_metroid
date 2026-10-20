@@ -1,0 +1,63 @@
+// microG (https://microg.org), official signed releases v0.3.17.252432, GPG-verified against
+// the microG Project Team key 22F7 96D6 E62E 6625 A0BC EFEA 7F97 9A66 F3E0 8422.
+// The framework lets exactly these packages, signed by microG, spoof Google's signature.
+
+android_app_import {
+    name: "GmsCore",
+    apk: "GmsCore.apk",
+    presigned: true,
+    privileged: true,
+    product_specific: true,
+    dex_preopt: {
+        enabled: false,
+    },
+    required: [
+        "privapp-permissions-com.google.android.gms.xml",
+        "default-permissions-microg.xml",
+        "sysconfig-microg.xml",
+    ],
+}
+
+// The Play Store stand-in: an ordinary system app, it needs no installer powers.
+android_app_import {
+    name: "MicrogCompanion",
+    apk: "MicrogCompanion.apk",
+    presigned: true,
+    product_specific: true,
+    dex_preopt: {
+        enabled: false,
+    },
+}
+
+prebuilt_etc {
+    name: "privapp-permissions-com.google.android.gms.xml",
+    src: "etc/privapp-permissions-com.google.android.gms.xml",
+    sub_dir: "permissions",
+    product_specific: true,
+}
+
+prebuilt_etc {
+    name: "default-permissions-microg.xml",
+    src: "etc/default-permissions-microg.xml",
+    sub_dir: "default-permissions",
+    product_specific: true,
+}
+
+prebuilt_etc {
+    name: "sysconfig-microg.xml",
+    src: "etc/sysconfig-microg.xml",
+    sub_dir: "sysconfig",
+    product_specific: true,
+}
+
+// microG Services Framework Proxy (com.google.android.gsf), official v0.1.0, signed with the
+// same microG key: the "Google Services Framework" some apps (legacy C2DM push) look for.
+android_app_import {
+    name: "GsfProxy",
+    apk: "GsfProxy.apk",
+    presigned: true,
+    product_specific: true,
+    dex_preopt: {
+        enabled: false,
+    },
+}

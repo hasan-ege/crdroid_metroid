@@ -1,0 +1,140 @@
+From 204990d63cc7bf5355aa178af1604b89f23cebb1 Mon Sep 17 00:00:00 2001
+From: hasan <gungorbzk@gmail.com>
+Date: Mon, 19 Oct 2026 01:07:36 +0300
+Subject: [PATCH 3/4] Settings: Essential Key entry below Glyph Matrix
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ res/drawable/ic_essential_key_expressive.xml |  6 ++++++
+ res/drawable/ic_essential_key_filled.xml     | 14 ++++++++++++++
+ res/drawable/ic_homepage_essential_key.xml   | 16 ++++++++++++++++
+ res/values-tr/metroid_glyph.xml              |  2 ++
+ res/values/metroid_glyph.xml                 |  4 ++++
+ res/xml/top_level_settings.xml               |  9 +++++++++
+ res/xml/top_level_settings_expressive.xml    |  9 +++++++++
+ 7 files changed, 60 insertions(+)
+ create mode 100644 res/drawable/ic_essential_key_expressive.xml
+ create mode 100644 res/drawable/ic_essential_key_filled.xml
+ create mode 100644 res/drawable/ic_homepage_essential_key.xml
+
+diff --git a/res/drawable/ic_essential_key_expressive.xml b/res/drawable/ic_essential_key_expressive.xml
+new file mode 100644
+index 00000000..5c51194e
+--- /dev/null
++++ b/res/drawable/ic_essential_key_expressive.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Essential Key homepage icon, tinted like the other expressive icons. -->
++<com.android.settings.widget.TintDrawable
++    xmlns:android="http://schemas.android.com/apk/res/android"
++    android:drawable="@drawable/ic_essential_key_filled"
++    android:tint="@color/homepage_essential_key_foreground" />
+diff --git a/res/drawable/ic_essential_key_filled.xml b/res/drawable/ic_essential_key_filled.xml
+new file mode 100644
+index 00000000..33c4a6cb
+--- /dev/null
++++ b/res/drawable/ic_essential_key_filled.xml
+@@ -0,0 +1,14 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Essential Key: a phone with its side key lit. -->
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    android:width="24dp"
++    android:height="24dp"
++    android:viewportWidth="24"
++    android:viewportHeight="24">
++    <path
++        android:fillColor="#FF000000"
++        android:pathData="M8,2h7a3,3 0,0 1,3 3v14a3,3 0,0 1,-3 3h-7a3,3 0,0 1,-3 -3v-14a3,3 0,0 1,3 -3zM8,4a1,1 0,0 0,-1 1v14a1,1 0,0 0,1 1h7a1,1 0,0 0,1 -1v-14a1,1 0,0 0,-1 -1z" />
++    <path
++        android:fillColor="#FF000000"
++        android:pathData="M19,7.5h1a1,1 0,0 1,1 1v4a1,1 0,0 1,-1 1h-1z" />
++</vector>
+diff --git a/res/drawable/ic_homepage_essential_key.xml b/res/drawable/ic_homepage_essential_key.xml
+new file mode 100644
+index 00000000..37a1729c
+--- /dev/null
++++ b/res/drawable/ic_homepage_essential_key.xml
+@@ -0,0 +1,16 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Essential Key homepage icon on a coloured background chip, like ic_homepage_*. -->
++<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
++    <item>
++        <com.android.settingslib.widget.AdaptiveIconShapeDrawable
++            android:width="@dimen/dashboard_tile_image_size"
++            android:height="@dimen/dashboard_tile_image_size"
++            android:color="@color/homepage_essential_key_background" />
++    </item>
++    <item
++        android:width="@dimen/dashboard_tile_foreground_image_size"
++        android:height="@dimen/dashboard_tile_foreground_image_size"
++        android:start="@dimen/dashboard_tile_foreground_image_inset"
++        android:top="@dimen/dashboard_tile_foreground_image_inset"
++        android:drawable="@drawable/ic_essential_key_expressive" />
++</layer-list>
+diff --git a/res/values-tr/metroid_glyph.xml b/res/values-tr/metroid_glyph.xml
+index 79cfc9d8..3787df4d 100644
+--- a/res/values-tr/metroid_glyph.xml
++++ b/res/values-tr/metroid_glyph.xml
+@@ -1,4 +1,6 @@
+ <?xml version="1.0" encoding="utf-8"?>
+ <resources>
+     <string name="glyph_matrix_settings_summary">Bildirimler, oyuncaklar, her zaman açık ve kayıt ışığı</string>
++    <string name="essential_key_settings_title">Essential Key</string>
++    <string name="essential_key_settings_summary">Fener, kamera, sessiz mod ve daha fazlası</string>
+ </resources>
+diff --git a/res/values/metroid_glyph.xml b/res/values/metroid_glyph.xml
+index a82f2d85..de6e4d8b 100644
+--- a/res/values/metroid_glyph.xml
++++ b/res/values/metroid_glyph.xml
+@@ -5,4 +5,8 @@
+     <color name="homepage_glyph_matrix_foreground">@color/homepage_red_fg</color>
+     <string name="glyph_matrix_settings_title">Glyph Matrix</string>
+     <string name="glyph_matrix_settings_summary">Notifications, toys, always-on and recording light</string>
++    <color name="homepage_essential_key_background">@color/homepage_orange_bg</color>
++    <color name="homepage_essential_key_foreground">@color/homepage_orange_fg</color>
++    <string name="essential_key_settings_title">Essential Key</string>
++    <string name="essential_key_settings_summary">Flashlight, camera, silent mode and more</string>
+ </resources>
+diff --git a/res/xml/top_level_settings.xml b/res/xml/top_level_settings.xml
+index 03fa8a48..a6967f5c 100644
+--- a/res/xml/top_level_settings.xml
++++ b/res/xml/top_level_settings.xml
+@@ -74,6 +74,15 @@
+             <intent android:action="org.openglyph.SETTINGS" />
+         </com.android.settings.widget.HomepagePreference>
+ 
++        <com.android.settings.widget.HomepagePreference
++            android:icon="@drawable/ic_homepage_essential_key"
++            android:key="top_level_essential_key"
++            android:order="-50"
++            android:title="@string/essential_key_settings_title"
++            android:summary="@string/essential_key_settings_summary">
++            <intent android:action="org.openglyph.ESSENTIAL_KEY" />
++        </com.android.settings.widget.HomepagePreference>
++
+         <com.android.settings.widget.HomepagePreference
+             android:fragment="com.android.settings.applications.AppDashboardFragment"
+             android:icon="@drawable/ic_apps_filled"
+diff --git a/res/xml/top_level_settings_expressive.xml b/res/xml/top_level_settings_expressive.xml
+index 0c773c13..2edbac95 100644
+--- a/res/xml/top_level_settings_expressive.xml
++++ b/res/xml/top_level_settings_expressive.xml
+@@ -70,6 +70,15 @@
+             <intent android:action="org.openglyph.SETTINGS" />
+         </com.android.settings.widget.HomepagePreference>
+ 
++        <com.android.settings.widget.HomepagePreference
++            android:icon="@drawable/ic_homepage_essential_key"
++            android:key="top_level_essential_key"
++            android:order="-55"
++            android:title="@string/essential_key_settings_title"
++            android:summary="@string/essential_key_settings_summary">
++            <intent android:action="org.openglyph.ESSENTIAL_KEY" />
++        </com.android.settings.widget.HomepagePreference>
++
+         <com.android.settings.widget.HomepagePreference
+             android:fragment="com.android.settings.notification.ConfigureNotificationSettings"
+             android:icon="@drawable/ic_notifications_filled"
+-- 
+2.56.0
+

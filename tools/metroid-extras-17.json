@@ -1,0 +1,112 @@
+[
+ {
+  "repo": "android_vendor_qcom_opensource_agm",
+  "path": "hardware/qcom-caf/sm8750/audio/agm",
+  "commits": [
+   {
+    "sha": "d9074508197b4ec799da24275f51fbd653ab6a66",
+    "title": "agm: Fix 64-bit wall clock subtraction"
+   }
+  ]
+ },
+ {
+  "repo": "android_vendor_qcom_opensource_arpal-lx",
+  "path": "hardware/qcom-caf/sm8750/audio/pal",
+  "commits": [
+   {
+    "sha": "3531ba88fe67763e3866d3a91b84f8ffa92a311a",
+    "title": "pal: Add ADSP sleep monitor UAPI header"
+   }
+  ]
+ },
+ {
+  "repo": "android_hardware_qcom_audio-ar",
+  "path": "hardware/qcom-caf/sm8750/audio/primary-hal",
+  "commits": [
+   {
+    "sha": "ad1f1ecc9961f4b17a223764e141fe429873f204",
+    "title": "primary-hal: Make optional audio services non-mandatory"
+   }
+  ]
+ },
+ {
+  "repo": "android_vendor_qcom_opensource_data-ipa-cfg-mgr",
+  "path": "hardware/qcom-caf/sm8750/data-ipa-cfg-mgr",
+  "commits": [
+   {
+    "sha": "4bef07c3101f65edd00abe78389c34da5795f6ea",
+    "title": "ipacm: Add required build include paths"
+   }
+  ]
+ },
+ {
+  "repo": "android_vendor_qcom_opensource_dataipa",
+  "path": "hardware/qcom-caf/sm8750/dataipa",
+  "commits": [
+   {
+    "sha": "2e03bd4ae234c774e843a415cc6dbb7bb21e4631",
+    "title": "ipanat: Add missing msm_ipa UAPI header"
+   }
+  ]
+ },
+ {
+  "repo": "android_hardware_qcom_display",
+  "path": "hardware/qcom-caf/sm8750/display/hal",
+  "commits": [
+   {
+    "sha": "3bee7f7229476083c12758ca8563fb9a1a428dd1",
+    "title": "display: Add build compatibility shims"
+   }
+  ]
+ },
+ {
+  "repo": "android_packages_apps_AudioFX",
+  "path": "packages/apps/AudioFX",
+  "commits": [
+   {
+    "sha": "38665f1b93b1ff4eb6deb4a1b26fae3c3160d9d7",
+    "title": "AudioFX: add inert framework keepalive service"
+   }
+  ]
+ },
+ {
+  "repo": "android_packages_modules_common",
+  "path": "packages/modules/common",
+  "commits": [
+   {
+    "sha": "38373815c386c887d9a188f6e38c3e6747469d4f",
+    "title": "Add Codec2 plugin headers to allowed dependencies"
+   }
+  ]
+ },
+ {
+  "repo": "android_packages_modules_adb",
+  "path": "packages/modules/adb",
+  "commits": [
+   {
+    "sha": "8521d6eb0cbf748fbbe90ed1cb2207ed3a005bae",
+    "title": "adb: request authoritative sideload install results"
+   }
+  ]
+ },
+ {
+  "repo": "android_packages_providers_TelephonyProvider",
+  "path": "packages/providers/TelephonyProvider",
+  "commits": [
+   {
+    "sha": "ae33b6abfe3cac04a37447f24e4f5cb21f6820eb",
+    "title": "TelephonyProvider: refresh APNs when config changes"
+   }
+  ]
+ },
+ {
+  "repo": "android_vendor_qcom_opensource_vibrator",
+  "path": "vendor/qcom/opensource/vibrator",
+  "commits": [
+   {
+    "sha": "41666361b230d45b47964986f976378eecb7daf6",
+    "title": "vibrator: support metroid stock haptic stack"
+   }
+  ]
+ }
+]

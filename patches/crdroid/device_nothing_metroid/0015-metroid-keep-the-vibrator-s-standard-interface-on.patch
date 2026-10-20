@@ -1,0 +1,38 @@
+From 6aa9352b1d25c423c82dc3ad3ebc9ba8c20605e7 Mon Sep 17 00:00:00 2001
+From: hasan <gungorbzk@gmail.com>
+Date: Sun, 18 Oct 2026 11:44:16 +0300
+Subject: [PATCH] metroid: keep the vibrator's standard interface on
+
+The stock vibrator HAL sets haptic_interface_disable=1 on user builds, as
+Nothing OS plays haptics through RichTap. AOSP uses the leds class interface,
+so on a user build every vibration was ignored by the driver. Clear the flag
+after the HAL has written it.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ rootdir/etc/init.metroid.rc | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/rootdir/etc/init.metroid.rc b/rootdir/etc/init.metroid.rc
+index 5be06e9..c107888 100644
+--- a/rootdir/etc/init.metroid.rc
++++ b/rootdir/etc/init.metroid.rc
+@@ -7,3 +7,15 @@ on boot
+     # Sensors multihal (uid system): single tap and FOD state from the touch driver
+     chown system system /sys/devices/platform/soc/ac0000.qcom,qupv3_1_geni_se/a90000.spi/spi_master/spi4/spi4.0/fts_gesture_fod_pressed
+     chown system system /sys/devices/platform/soc/ac0000.qcom,qupv3_1_geni_se/a90000.spi/spi_master/spi4/spi4.0/fts_gesture_single_tap_pressed
++
++# Vibrator: the stock HAL turns the driver's standard (leds class) interface off on "user"
++# builds (check_haptic_sample_param: "user haptic_interface disalbe_flag:1"), because Nothing
++# OS plays haptics through RichTap. AOSP vibrates through that interface, so with the flag set
++# every vibration is dropped ("activate_store: val : 1 ignore"). Turn it back on after the HAL
++# has written it: the HAL does so when vendor.haptic.calibrate.done is set, then sets
++# persist.vendor.sfdc, so the second trigger runs after its write.
++on property:vendor.haptic.calibrate.done=1
++    write /sys/class/leds/vibrator_nt/haptic_interface_disable 0
++
++on property:persist.vendor.sfdc=*
++    write /sys/class/leds/vibrator_nt/haptic_interface_disable 0
+-- 
+2.56.0
+

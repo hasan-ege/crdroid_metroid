@@ -1,0 +1,86 @@
+From afdcf9c945c76ba588e1090221ae9100706089ac Mon Sep 17 00:00:00 2001
+From: hasan <gungorbzk@gmail.com>
+Date: Mon, 19 Oct 2026 03:20:44 +0300
+Subject: [PATCH 1/2] Telecom: generative ringtone per caller from OpenGlyph
+
+When a contact has no ringtone of its own and open_glyph_generative_ringtone
+is on, ring with content://org.openglyph.ringtone/caller/<sha-256 of the
+number's last 10 digits>. Only the hash leaves Telecom; the default ringtone
+stays the fallback.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../server/telecom/RingtoneFactory.java       | 50 +++++++++++++++++++
+ 1 file changed, 50 insertions(+)
+
+diff --git a/src/com/android/server/telecom/RingtoneFactory.java b/src/com/android/server/telecom/RingtoneFactory.java
+index fb6843d..282253f 100644
+--- a/src/com/android/server/telecom/RingtoneFactory.java
++++ b/src/com/android/server/telecom/RingtoneFactory.java
+@@ -89,6 +89,20 @@ public class RingtoneFactory {
+                         + " is owned by the current user. Falling back to the default ringtone.");
+             }
+         }
++        if (ringtone == null && userContext != null) {
++            // No ringtone of the contact's own: OpenGlyph (Nothing Phone (3)) can give each
++            // caller a generative ringtone of their own when the user turned it on.
++            Uri generative = generativeRingtoneUri(incomingCall, userContext);
++            if (generative != null) {
++                try {
++                    ringtone = RingtoneManager.getRingtone(
++                            userContext, generative, volumeShaperConfig, audioAttrs);
++                    if (ringtone != null) ringtoneUri = generative;
++                } catch (Exception e) {
++                    Log.w(this, "getRingtone: generative ringtone failed: %s", e);
++                }
++            }
++        }
+         if (ringtone == null) {
+             // Contact didn't specify ringtone or custom Ringtone creation failed. Get default
+             // ringtone for user or profile.
+@@ -146,6 +160,42 @@ public class RingtoneFactory {
+         return new Pair(ringtoneUri, ringtone);
+     }
+ 
++    private static final String GENERATIVE_RINGTONE_SETTING = "open_glyph_generative_ringtone";
++    private static final String GENERATIVE_RINGTONE_AUTHORITY = "org.openglyph.ringtone";
++
++    /**
++     * content://org.openglyph.ringtone/caller/<sha-256 of the number's last 10 digits>, or null
++     * when the setting is off, the number is hidden or OpenGlyph is missing. Only a hash leaves
++     * Telecom, and the same caller always maps to the same sound, whatever the number's format.
++     */
++    private Uri generativeRingtoneUri(Call call, Context userContext) {
++        if (Settings.Secure.getIntForUser(userContext.getContentResolver(),
++                GENERATIVE_RINGTONE_SETTING, 0, userContext.getUserId()) == 0) {
++            return null;
++        }
++        Uri handle = call.getHandle();
++        if (handle == null || !android.telecom.PhoneAccount.SCHEME_TEL.equals(handle.getScheme())) {
++            return null;
++        }
++        String digits = handle.getSchemeSpecificPart().replaceAll("[^0-9]", "");
++        if (digits.isEmpty()) return null;
++        if (digits.length() > 10) digits = digits.substring(digits.length() - 10);
++        if (userContext.getPackageManager().resolveContentProvider(
++                GENERATIVE_RINGTONE_AUTHORITY, 0) == null) {
++            return null;
++        }
++        try {
++            byte[] hash = java.security.MessageDigest.getInstance("SHA-256")
++                    .digest(digits.getBytes(java.nio.charset.StandardCharsets.US_ASCII));
++            StringBuilder key = new StringBuilder();
++            for (byte b : hash) key.append(String.format("%02x", b));
++            return new Uri.Builder().scheme("content").authority(GENERATIVE_RINGTONE_AUTHORITY)
++                    .appendPath("caller").appendPath(key.toString()).build();
++        } catch (java.security.NoSuchAlgorithmException e) {
++            return null;
++        }
++    }
++
+     private boolean currentUserOwnsRingtone(Uri ringtoneUri, Call incomingCall) {
+         if (ringtoneUri.getUserInfo() == null) {
+             // The current user set this custom ringtone:
+-- 
+2.56.0
+

@@ -1,0 +1,37 @@
+From 0a42f05c882c52b5d78a755cde41e42bc0258dcd Mon Sep 17 00:00:00 2001
+From: hasan <gungorbzk@gmail.com>
+Date: Mon, 19 Oct 2026 17:40:43 +0300
+Subject: [PATCH] metroid: VoLTE available on Turkish carriers (286-01/02/03)
+
+Without it the framework treats VoLTE as unavailable on Turkcell: IMS fails to
+register every minute, calls drop to 3G and SMS delivery is unreliable.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../CarrierConfigOverlayMetroid/res/xml/vendor.xml   | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/overlay/metroid/CarrierConfigOverlayMetroid/res/xml/vendor.xml b/overlay/metroid/CarrierConfigOverlayMetroid/res/xml/vendor.xml
+index c155259..cc7f3d7 100644
+--- a/overlay/metroid/CarrierConfigOverlayMetroid/res/xml/vendor.xml
++++ b/overlay/metroid/CarrierConfigOverlayMetroid/res/xml/vendor.xml
+@@ -45,4 +45,16 @@
+         <boolean name="require_apn_filtering_with_radio_capability_bool" value="true" />
+         <boolean name="editable_enhanced_4g_lte_bool" value="false" />
+     </carrier_config>
++    <!-- Turkey: Turkcell, Vodafone TR and Türk Telekom run VoLTE (and SMS over IMS); without this
++         the framework treats VoLTE as unavailable, IMS never registers and SMS falls back to the
++         unreliable legacy path. -->
++    <carrier_config mcc="286" mnc="01">
++        <boolean name="carrier_volte_available_bool" value="true" />
++    </carrier_config>
++    <carrier_config mcc="286" mnc="02">
++        <boolean name="carrier_volte_available_bool" value="true" />
++    </carrier_config>
++    <carrier_config mcc="286" mnc="03">
++        <boolean name="carrier_volte_available_bool" value="true" />
++    </carrier_config>
+ </carrier_config_list>
+-- 
+2.56.0
+

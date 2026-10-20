@@ -1,0 +1,76 @@
+From 1cb9b104acd6e0f9ecf2ba25f9c76036e9db7fa3 Mon Sep 17 00:00:00 2001
+From: hasan <gungorbzk@gmail.com>
+Date: Mon, 19 Oct 2026 03:52:22 +0300
+Subject: [PATCH] Aperture: show the self-timer on the Glyph Matrix (OpenGlyph)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../aperture/ui/views/CountDownView.kt        |  3 +++
+ .../aperture/utils/GlyphCountdown.kt          | 27 +++++++++++++++++++
+ 2 files changed, 30 insertions(+)
+ create mode 100644 app/src/main/java/org/lineageos/aperture/utils/GlyphCountdown.kt
+
+diff --git a/app/src/main/java/org/lineageos/aperture/ui/views/CountDownView.kt b/app/src/main/java/org/lineageos/aperture/ui/views/CountDownView.kt
+index e94e0f8..2105338 100644
+--- a/app/src/main/java/org/lineageos/aperture/ui/views/CountDownView.kt
++++ b/app/src/main/java/org/lineageos/aperture/ui/views/CountDownView.kt
+@@ -21,6 +21,7 @@ import androidx.core.view.isVisible
+ import org.lineageos.aperture.R
+ import org.lineageos.aperture.ext.smoothRotate
+ import org.lineageos.aperture.models.Rotation
++import org.lineageos.aperture.utils.GlyphCountdown
+ 
+ /**
+  * This class manages the looks of the countdown.
+@@ -113,6 +114,7 @@ class CountDownView(context: Context, attrs: AttributeSet?) : FrameLayout(
+         }
+         isVisible = true
+         this.listener = listener
++        GlyphCountdown.show(context, sec)
+         remainingSecondsChanged(sec)
+     }
+ 
+@@ -123,6 +125,7 @@ class CountDownView(context: Context, attrs: AttributeSet?) : FrameLayout(
+         if (remainingSeconds > 0) {
+             remainingSeconds = 0
+             handler.removeMessages(SET_TIMER_TEXT)
++            GlyphCountdown.show(context, 0)
+             isInvisible = true
+             return true
+         }
+diff --git a/app/src/main/java/org/lineageos/aperture/utils/GlyphCountdown.kt b/app/src/main/java/org/lineageos/aperture/utils/GlyphCountdown.kt
+new file mode 100644
+index 0000000..7cefe59
+--- /dev/null
++++ b/app/src/main/java/org/lineageos/aperture/utils/GlyphCountdown.kt
+@@ -0,0 +1,27 @@
++/*
++ * SPDX-FileCopyrightText: The LineageOS Project
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++package org.lineageos.aperture.utils
++
++import android.content.Context
++import android.net.Uri
++import android.os.Bundle
++
++/**
++ * Shows the self-timer on the Glyph Matrix of a Nothing Phone (3) (OpenGlyph), so the
++ * countdown is visible when shooting with the rear camera. Does nothing elsewhere.
++ */
++object GlyphCountdown {
++    private val uri = Uri.parse("content://org.openglyph.recordlight")
++
++    /** Starts a countdown of [seconds] on the matrix; 0 cancels it. */
++    fun show(context: Context, seconds: Int) {
++        runCatching {
++            context.contentResolver.call(uri, "countdown", null, Bundle().apply {
++                putInt("seconds", seconds)
++            })
++        }
++    }
++}
+-- 
+2.56.0
+

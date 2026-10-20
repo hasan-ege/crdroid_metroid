@@ -1,0 +1,142 @@
+From f91a754df2aa6b173a1ec72c1b33894249d29484 Mon Sep 17 00:00:00 2001
+From: hasan <hasan@localhost>
+Date: Sun, 18 Oct 2026 07:24:33 +0300
+Subject: [PATCH] metroid: forward the Glyph Button to OpenGlyph
+
+The pressure spot under the Glyph Matrix is aw9380x_0_ch0; a firm press reports
+EV_KEY scancode 251 (getevent: 7 of 10 presses). Map it to MACRO_1 (no framework
+behaviour) and let MetroidKeyHandler consume it by scancode, sending
+org.openglyph.action.GLYPH_BUTTON (down/up/tap/long_press, long >= 600 ms).
+---
+ device.mk                                     |  4 +-
+ .../lineageos/settings/device/KeyHandler.java | 47 ++++++++++++++++++-
+ keylayout/aw9380x_0_ch0.kl                    |  5 ++
+ 3 files changed, 53 insertions(+), 3 deletions(-)
+ create mode 100644 keylayout/aw9380x_0_ch0.kl
+
+diff --git a/device.mk b/device.mk
+index 4030223..6119fa2 100644
+--- a/device.mk
++++ b/device.mk
+@@ -422,8 +422,10 @@ PRODUCT_PACKAGES += \
+ 
+ # Essential Key (gpio-keys scancode 250): keylayout + system_server KeyHandler that
+ # toggles the torch (config_deviceKeyHandlerLibs lineage-sdk overlay points at the jar).
++# Glyph Button (aw9380x_0_ch0 scancode 251): same handler, forwarded to OpenGlyph.
+ PRODUCT_COPY_FILES += \
+-    device/nothing/metroid/keylayout/gpio-keys.kl:$(TARGET_COPY_OUT_SYSTEM)/usr/keylayout/gpio-keys.kl
++    device/nothing/metroid/keylayout/gpio-keys.kl:$(TARGET_COPY_OUT_SYSTEM)/usr/keylayout/gpio-keys.kl \
++    device/nothing/metroid/keylayout/aw9380x_0_ch0.kl:$(TARGET_COPY_OUT_SYSTEM)/usr/keylayout/aw9380x_0_ch0.kl
+ PRODUCT_PACKAGES += MetroidKeyHandler
+ 
+ # Ambient display on movement: LineageOS Doze (from hardware/oplus) listening to the QTI tilt
+diff --git a/keyhandler/src/org/lineageos/settings/device/KeyHandler.java b/keyhandler/src/org/lineageos/settings/device/KeyHandler.java
+index 8805571..5d105ac 100644
+--- a/keyhandler/src/org/lineageos/settings/device/KeyHandler.java
++++ b/keyhandler/src/org/lineageos/settings/device/KeyHandler.java
+@@ -3,17 +3,22 @@
+  * SPDX-License-Identifier: Apache-2.0
+  *
+  * Nothing Phone (3) "metroid" Essential Key (gpio-keys scancode 250 / 0xfa):
+- * toggle the torch. Runs inside system_server (PhoneWindowManager
+- * dispatchKeyToKeyHandlers), so keep it lightweight and never throw.
++ * toggle the torch. Glyph Button (aw9380x_0_ch0 scancode 251 / 0xfb, a firm
++ * press on the spot under the Glyph Matrix): forwarded to OpenGlyph as
++ * down / up / tap / long_press broadcasts. Runs inside system_server
++ * (PhoneWindowManager dispatchKeyToKeyHandlers), so keep it lightweight and
++ * never throw.
+  */
+ 
+ package org.lineageos.settings.device;
+ 
+ import android.content.Context;
++import android.content.Intent;
+ import android.hardware.camera2.CameraCharacteristics;
+ import android.hardware.camera2.CameraManager;
+ import android.os.Handler;
+ import android.os.HandlerThread;
++import android.os.UserHandle;
+ import android.util.Log;
+ import android.view.KeyEvent;
+ 
+@@ -22,7 +27,15 @@ import com.android.internal.os.DeviceKeyHandler;
+ public class KeyHandler implements DeviceKeyHandler {
+     private static final String TAG = "MetroidKeyHandler";
+     private static final int SCANCODE_ESSENTIAL_KEY = 250;
++    private static final int SCANCODE_GLYPH_BUTTON = 251;
+ 
++    // Must match OpenGlyph's GlyphService button receiver.
++    private static final String ACTION_GLYPH_BUTTON = "org.openglyph.action.GLYPH_BUTTON";
++    private static final String OPENGLYPH_PACKAGE = "org.openglyph";
++    private static final String EXTRA_EVENT = "event";
++    private static final long LONG_PRESS_MS = 600;
++
++    private final Context mContext;
+     private final CameraManager mCameraManager;
+     private final Handler mHandler;
+ 
+@@ -30,6 +43,7 @@ public class KeyHandler implements DeviceKeyHandler {
+     private boolean mTorchEnabled = false;
+ 
+     public KeyHandler(Context context) {
++        mContext = context;
+         HandlerThread thread = new HandlerThread(TAG);
+         thread.start();
+         mHandler = new Handler(thread.getLooper());
+@@ -68,6 +82,10 @@ public class KeyHandler implements DeviceKeyHandler {
+ 
+     @Override
+     public KeyEvent handleKeyEvent(KeyEvent event) {
++        if (event.getScanCode() == SCANCODE_GLYPH_BUTTON) {
++            handleGlyphButton(event);
++            return null;
++        }
+         if (event.getScanCode() != SCANCODE_ESSENTIAL_KEY) {
+             return event; // not ours — pass through
+         }
+@@ -77,6 +95,31 @@ public class KeyHandler implements DeviceKeyHandler {
+         return null; // consume both down and up
+     }
+ 
++    private void handleGlyphButton(KeyEvent event) {
++        if (event.getRepeatCount() > 0) return;
++        if (event.getAction() == KeyEvent.ACTION_DOWN) {
++            mHandler.post(() -> sendGlyphButton("down"));
++        } else if (event.getAction() == KeyEvent.ACTION_UP) {
++            boolean longPress = event.getEventTime() - event.getDownTime() >= LONG_PRESS_MS;
++            mHandler.post(() -> {
++                sendGlyphButton("up");
++                sendGlyphButton(longPress ? "long_press" : "tap");
++            });
++        }
++    }
++
++    private void sendGlyphButton(String what) {
++        try {
++            Intent intent = new Intent(ACTION_GLYPH_BUTTON)
++                    .setPackage(OPENGLYPH_PACKAGE)
++                    .putExtra(EXTRA_EVENT, what)
++                    .addFlags(Intent.FLAG_RECEIVER_FOREGROUND);
++            mContext.sendBroadcastAsUser(intent, UserHandle.SYSTEM);
++        } catch (Exception e) {
++            Log.w(TAG, "Glyph Button broadcast failed", e);
++        }
++    }
++
+     private void toggleTorch() {
+         if (mCameraManager == null) return;
+         String id = getTorchCameraId();
+diff --git a/keylayout/aw9380x_0_ch0.kl b/keylayout/aw9380x_0_ch0.kl
+new file mode 100644
+index 0000000..4a40639
+--- /dev/null
++++ b/keylayout/aw9380x_0_ch0.kl
+@@ -0,0 +1,5 @@
++# Nothing Phone (3) Glyph Button: the pressure-sensitive spot under the Glyph Matrix
++# (aw9380x force/cap sensor, channel 0). A firm press reports scancode 251 (0xfb).
++# MACRO_1 has no framework behaviour of its own; MetroidKeyHandler consumes it by scancode
++# and forwards tap / long press to OpenGlyph.
++key 251   MACRO_1
+-- 
+2.56.0
+

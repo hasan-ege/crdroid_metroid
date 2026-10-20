@@ -1,0 +1,111 @@
+From 1c2b18ba5da813dd678da83b272235dd35d55a2e Mon Sep 17 00:00:00 2001
+From: hasan <gungorbzk@gmail.com>
+Date: Mon, 19 Oct 2026 11:30:21 +0300
+Subject: [PATCH 2/2] metroid: Android 17: do not extract the system_ext Wi-Fi
+ Display stack
+
+inherit-product merges the vendor makefile after lineage_metroid.mk, so a
+filter-out there cannot drop its packages; leave them out of the blob list.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ lineage_metroid.mk    | 13 -------------
+ proprietary-files.txt | 24 ++----------------------
+ 2 files changed, 2 insertions(+), 35 deletions(-)
+
+diff --git a/lineage_metroid.mk b/lineage_metroid.mk
+index aa16792..bea08a4 100644
+--- a/lineage_metroid.mk
++++ b/lineage_metroid.mk
+@@ -12,19 +12,6 @@ $(call inherit-product, device/nothing/metroid/device.mk)
+ # Keep only Nothing's stock AW86938/RichTap implementation.
+ PRODUCT_PACKAGES := $(filter-out vendor.qti.hardware.vibrator.service,$(PRODUCT_PACKAGES))
+ 
+-# Android 17: the system_ext half of Qualcomm's Wi-Fi Display (Miracast) stack links private
+-# Android 16 framework symbols (AudioSystem, SurfaceComposerClient) that changed, so it cannot
+-# load on 17. Leave it out (its vendor half stays); wireless display casting is unavailable.
+-METROID_WFD_SYSTEM_EXT := \
+-    libsigmautils libwfdavenhancements libwfdclient libwfdcommonutils libwfdconfigutils \
+-    libwfddisplayconfig libwfdmminterface libwfdmmsink libwfdmmsrc_system libwfdnative \
+-    libwfdrtsp libwfdservice libwfdsinksm libwfduibcinterface libwfduibcsink \
+-    libwfduibcsinkinterface libwfduibcsrc libwfduibcsrcinterface
+-PRODUCT_PACKAGES := $(filter-out $(METROID_WFD_SYSTEM_EXT),$(PRODUCT_PACKAGES))
+-PRODUCT_COPY_FILES := $(foreach f,$(PRODUCT_COPY_FILES),\
+-    $(if $(filter %/system_ext/etc/init/wfdservice.rc %wfd-system-ext-privapp-permissions-qti.xml \
+-        %/system_ext/etc/seccomp_policy/wfdservice64.policy %/system_ext/etc/wfdconfigsink.xml \
+-        %/system_ext/etc/wfdconfig.xml,$(firstword $(subst :, ,$(f)))),,$(f)))
+ 
+ # Own release keys: vendor/lineage/config/common.mk already does
+ # "-include vendor/lineage-priv/keys/keys.mk". Including it here as well duplicated list
+diff --git a/proprietary-files.txt b/proprietary-files.txt
+index 2cd9f67..6882f80 100644
+--- a/proprietary-files.txt
++++ b/proprietary-files.txt
+@@ -64,7 +64,8 @@ system_ext/etc/init/rkp.rc
+ system_ext/etc/init/sltntc.rc
+ system_ext/etc/init/sxrauxd_ext.rc
+ system_ext/etc/init/tcmd.rc
+-system_ext/etc/init/wfdservice.rc
++# Android 17: the system_ext Wi-Fi Display stack (libwfd*, libsigmautils, wfdservice config)
++# links private Android 16 framework symbols and cannot load on 17, so it is not extracted.
+ system_ext/etc/nt_performance/cmd_table.xml
+ system_ext/etc/perf/wlc_model.tflite
+ system_ext/etc/permissions/androidx.window.extensions.xml
+@@ -137,14 +138,12 @@ system_ext/etc/permissions/vendor.qti.hardware.c2pa-V1-java.xml
+ system_ext/etc/permissions/vendor.qti.ims.rcsservice.xml
+ system_ext/etc/permissions/vendor.qti.imsdatachannel.xml
+ system_ext/etc/permissions/vendor.qti.imsdcservice.xml
+-system_ext/etc/permissions/wfd-system-ext-privapp-permissions-qti.xml
+ system_ext/etc/public.libraries-qti.txt
+ system_ext/etc/qspa/qspa_default.rc
+ system_ext/etc/seccomp_policy/perfservice.policy
+ system_ext/etc/seccomp_policy/qcrosvm.policy
+ system_ext/etc/seccomp_policy/sxraux-arm.policy
+ system_ext/etc/seccomp_policy/tcmd.policy
+-system_ext/etc/seccomp_policy/wfdservice64.policy
+ system_ext/etc/sltntc/sltntc_SM7325.conf
+ system_ext/etc/sltntc/sltntc_SM7635.conf
+ system_ext/etc/sltntc/sltntc_SM8475.conf
+@@ -160,7 +159,6 @@ system_ext/etc/sysconfig/qti_telephony_system_packages_config.xml
+ system_ext/etc/sysconfig/qti_whitelist_system_ext.xml
+ system_ext/etc/sysconfig/whitelist_com.qualcomm.qti.uceShimService.xml
+ system_ext/etc/system_perfetto.cfg
+-system_ext/etc/wfdconfigsink.xml
+ system_ext/framework/ActivityExt.jar
+ system_ext/framework/ActivityExt.jar.fsv_meta
+ system_ext/framework/SatelliteClient.jar
+@@ -654,7 +652,6 @@ system_ext/lib64/libqti_workloadclassifiermodel.so
+ system_ext/lib64/librecpp_intf.so
+ system_ext/lib64/libsd_sdk_display.qti.so
+ system_ext/lib64/libsdm-disp-apis.qti.so
+-system_ext/lib64/libsigmautils.so
+ system_ext/lib64/libskewknob_system.so
+ system_ext/lib64/libsmomoconfig.qti.so
+ system_ext/lib64/libthermalclient.qti.so
+@@ -663,23 +660,6 @@ system_ext/lib64/libupdateprof.qti.so
+ system_ext/lib64/libvndfwk_detect_jni.qti_system.so
+ system_ext/lib64/libvr_amb_engine.so
+ system_ext/lib64/libvr_object_engine.so
+-system_ext/lib64/libwfdavenhancements.so
+-system_ext/lib64/libwfdclient.so
+-system_ext/lib64/libwfdcommonutils.so
+-system_ext/lib64/libwfdconfigutils.so
+-system_ext/lib64/libwfddisplayconfig.so
+-system_ext/lib64/libwfdmminterface.so
+-system_ext/lib64/libwfdmmsink.so
+-system_ext/lib64/libwfdmmsrc_system.so
+-system_ext/lib64/libwfdnative.so;DISABLE_CHECKELF
+-system_ext/lib64/libwfdrtsp.so
+-system_ext/lib64/libwfdservice.so
+-system_ext/lib64/libwfdsinksm.so
+-system_ext/lib64/libwfduibcinterface.so
+-system_ext/lib64/libwfduibcsink.so
+-system_ext/lib64/libwfduibcsinkinterface.so
+-system_ext/lib64/libwfduibcsrc.so
+-system_ext/lib64/libwfduibcsrcinterface.so
+ system_ext/lib64/vendor.qti.ImsRtpService-V2-ndk.so
+ system_ext/lib64/vendor.qti.data.dmapconsent-V1-ndk.so
+ system_ext/lib64/vendor.qti.data.dmapconsent-V2-ndk.so
+-- 
+2.56.0
+

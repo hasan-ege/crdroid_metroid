@@ -1,0 +1,26 @@
+From 6763302169851698668884ac1063085a58d0e4ed Mon Sep 17 00:00:00 2001
+From: hasan <hasan@localhost>
+Date: Sun, 18 Oct 2026 10:28:15 +0300
+Subject: [PATCH] metroid: ship OpenGlyphCompat
+
+---
+ device.mk | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/device.mk b/device.mk
+index 6119fa2..e05b2e9 100644
+--- a/device.mk
++++ b/device.mk
+@@ -388,7 +388,8 @@ PRODUCT_PRECOMPILED_SEPOLICY := false
+ # OpenGlyph: open-source Glyph Matrix service (packages/apps/OpenGlyph) in place of the closed
+ # stock stack above: notification/charging/call effects, app API, red recording LED.
+ PRODUCT_PACKAGES += \
+-    OpenGlyph
++    OpenGlyph \
++    OpenGlyphCompat
+ 
+ # OPUS bring-up: EARLY (system build.prop, before zygote) props — /vendor/build.prop loads too late here.
+ # ro.hw_timeout_multiplier=4 -> framework Watchdog 60s*4=240s to survive the slow imageless first boot
+-- 
+2.56.0
+

@@ -1,0 +1,213 @@
+From c18c859bfb22a4daa528f943315f7f265fba9ea9 Mon Sep 17 00:00:00 2001
+From: hasan <gungorbzk@gmail.com>
+Date: Mon, 19 Oct 2026 01:07:36 +0300
+Subject: [PATCH] metroid: KeyHandler: Essential Key runs the action chosen in
+ Settings
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../lineageos/settings/device/KeyHandler.java | 169 +++++++++++++++++-
+ 1 file changed, 164 insertions(+), 5 deletions(-)
+
+diff --git a/keyhandler/src/org/lineageos/settings/device/KeyHandler.java b/keyhandler/src/org/lineageos/settings/device/KeyHandler.java
+index cfd5852..ad41093 100644
+--- a/keyhandler/src/org/lineageos/settings/device/KeyHandler.java
++++ b/keyhandler/src/org/lineageos/settings/device/KeyHandler.java
+@@ -2,8 +2,10 @@
+  * Copyright (C) 2026 The LineageOS Project
+  * SPDX-License-Identifier: Apache-2.0
+  *
+- * Nothing Phone (3) "metroid" Essential Key (gpio-keys scancode 250 / 0xfa):
+- * toggle the torch. Glyph Button (aw9380x_0_ch0 scancode 251 / 0xfb, a firm
++ * Nothing Phone (3) "metroid" Essential Key (gpio-keys scancode 250 / 0xfa): runs the
++ * action chosen in Settings > Essential Key (OpenGlyph writes the essential_key_* secure
++ * settings): flashlight (default), silent mode, Do Not Disturb, camera, voice recorder,
++ * screenshot, Glyph Toys, play/pause, open an app, or nothing; on press, or on press and hold. Glyph Button (aw9380x_0_ch0 scancode 251 / 0xfb, a firm
+  * press on the spot under the Glyph Matrix): forwarded to OpenGlyph as
+  * down / up / tap / long_press broadcasts. Runs inside system_server
+  * (PhoneWindowManager dispatchKeyToKeyHandlers), so keep it lightweight and
+@@ -12,8 +14,18 @@
+ 
+ package org.lineageos.settings.device;
+ 
++import android.app.KeyguardManager;
++import android.app.NotificationManager;
++import android.content.ComponentName;
+ import android.content.Context;
+ import android.content.Intent;
++import android.media.AudioManager;
++import android.os.PowerManager;
++import android.os.SystemClock;
++import android.provider.MediaStore;
++import android.provider.Settings;
++import android.view.WindowManager;
++import com.android.internal.util.ScreenshotHelper;
+ import android.hardware.camera2.CameraCharacteristics;
+ import android.hardware.camera2.CameraManager;
+ import android.os.Handler;
+@@ -106,12 +118,159 @@ public class KeyHandler implements DeviceKeyHandler {
+         if (event.getScanCode() != SCANCODE_ESSENTIAL_KEY) {
+             return event; // not ours — pass through
+         }
+-        if (event.getAction() == KeyEvent.ACTION_UP) {
+-            mHandler.post(this::toggleTorch);
+-        }
++        handleEssentialKey(event);
+         return null; // consume both down and up
+     }
+ 
++    // ---- Essential Key ----
++
++    private static final long HOLD_MS = 450;
++    private boolean mHoldFired;
++    private final Runnable mHold = () -> {
++        mHoldFired = true;
++        runEssentialAction();
++    };
++
++    private String secure(String key, String def) {
++        String v = Settings.Secure.getStringForUser(mContext.getContentResolver(), key,
++                android.os.UserHandle.USER_CURRENT);
++        return v == null ? def : v;
++    }
++
++    private void handleEssentialKey(KeyEvent event) {
++        if (event.getRepeatCount() > 0) return;
++        boolean hold = !"press".equals(secure("essential_key_trigger", "hold"));
++        if (event.getAction() == KeyEvent.ACTION_DOWN) {
++            mHoldFired = false;
++            if (hold) mHandler.postDelayed(mHold, HOLD_MS);
++        } else if (event.getAction() == KeyEvent.ACTION_UP) {
++            mHandler.removeCallbacks(mHold);
++            if (!hold) mHandler.post(this::runEssentialAction);
++        }
++    }
++
++    private void runEssentialAction() {
++        String action = secure("essential_key_action", "torch");
++        if ("none".equals(action)) return;
++        haptic(PRESS_HAPTIC_MS);
++        try {
++            switch (action) {
++                case "silent" -> toggleSilent();
++                case "dnd" -> toggleDnd();
++                case "camera" -> openCamera();
++                case "recorder" -> openPackage("org.lineageos.recorder", "mic");
++                case "screenshot" -> takeScreenshot();
++                case "glyph" -> sendGlyphButton("tap");
++                case "media" -> playPause();
++                case "app" -> openApp();
++                default -> {
++                    toggleTorch();
++                    showOnGlyph("torch");
++                }
++            }
++        } catch (Exception e) {
++            Log.w(TAG, "Essential Key action " + action + " failed", e);
++        }
++    }
++
++    /** Feedback on the back: OpenGlyph shows the action's icon on the matrix for a moment. */
++    private void showOnGlyph(String icon) {
++        try {
++            Intent i = new Intent("org.openglyph.action.ESSENTIAL_KEY")
++                    .setPackage(OPENGLYPH_PACKAGE).putExtra("icon", icon)
++                    .addFlags(Intent.FLAG_RECEIVER_FOREGROUND);
++            mContext.sendBroadcastAsUser(i, UserHandle.SYSTEM);
++        } catch (Exception ignored) {
++        }
++    }
++
++    private void toggleSilent() {
++        AudioManager am = mContext.getSystemService(AudioManager.class);
++        int quiet = "silent".equals(secure("essential_key_silent", "vibrate"))
++                ? AudioManager.RINGER_MODE_SILENT : AudioManager.RINGER_MODE_VIBRATE;
++        boolean nowQuiet = am.getRingerModeInternal() == AudioManager.RINGER_MODE_NORMAL;
++        am.setRingerModeInternal(nowQuiet ? quiet : AudioManager.RINGER_MODE_NORMAL);
++        showOnGlyph(nowQuiet ? "silent" : "bell");
++    }
++
++    private void toggleDnd() {
++        NotificationManager nm = mContext.getSystemService(NotificationManager.class);
++        boolean on = nm.getZenMode() == Settings.Global.ZEN_MODE_OFF;
++        nm.setZenMode(on ? Settings.Global.ZEN_MODE_IMPORTANT_INTERRUPTIONS
++                : Settings.Global.ZEN_MODE_OFF, null, TAG);
++        showOnGlyph(on ? "moon" : "bell");
++    }
++
++    private void wake() {
++        PowerManager pm = mContext.getSystemService(PowerManager.class);
++        if (!pm.isInteractive()) {
++            pm.wakeUp(SystemClock.uptimeMillis(), PowerManager.WAKE_REASON_GESTURE, TAG);
++        }
++    }
++
++    private boolean locked() {
++        KeyguardManager km = mContext.getSystemService(KeyguardManager.class);
++        return km != null && km.isKeyguardLocked();
++    }
++
++    private void start(Intent intent) {
++        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
++        mContext.startActivityAsUser(intent, UserHandle.CURRENT);
++    }
++
++    /** Camera, on top of the lock screen when locked (photo / selfie / video). */
++    private void openCamera() {
++        wake();
++        String mode = secure("essential_key_camera", "photo");
++        Intent i;
++        if ("video".equals(mode)) {
++            i = new Intent(MediaStore.INTENT_ACTION_VIDEO_CAMERA);
++        } else {
++            i = new Intent(locked() ? MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA_SECURE
++                    : MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA);
++        }
++        if ("selfie".equals(mode)) {
++            i.putExtra("android.intent.extras.CAMERA_FACING", 1)
++                    .putExtra("android.intent.extras.LENS_FACING_FRONT", 1)
++                    .putExtra("android.intent.extra.USE_FRONT_CAMERA", true);
++        }
++        start(i);
++        showOnGlyph("camera");
++    }
++
++    private void openPackage(String pkg, String icon) {
++        Intent i = mContext.getPackageManager().getLaunchIntentForPackage(pkg);
++        if (i == null) return;
++        wake();
++        start(i);
++        showOnGlyph(icon);
++    }
++
++    private void openApp() {
++        String flat = secure("essential_key_app", null);
++        ComponentName cn = flat == null ? null : ComponentName.unflattenFromString(flat);
++        if (cn == null) return;
++        wake();
++        start(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setComponent(cn));
++        showOnGlyph("star");
++    }
++
++    private void takeScreenshot() {
++        new ScreenshotHelper(mContext).takeScreenshot(
++                WindowManager.ScreenshotSource.SCREENSHOT_KEY_OTHER, mHandler, null);
++        showOnGlyph("shot");
++    }
++
++    private void playPause() {
++        AudioManager am = mContext.getSystemService(AudioManager.class);
++        long now = SystemClock.uptimeMillis();
++        am.dispatchMediaKeyEvent(new KeyEvent(now, now, KeyEvent.ACTION_DOWN,
++                KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, 0));
++        am.dispatchMediaKeyEvent(new KeyEvent(now, now, KeyEvent.ACTION_UP,
++                KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, 0));
++        showOnGlyph("play");
++    }
++
+     private void handleGlyphButton(KeyEvent event) {
+         if (event.getRepeatCount() > 0) return;
+         if (event.getAction() == KeyEvent.ACTION_DOWN) {
+-- 
+2.56.0
+

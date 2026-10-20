@@ -1,0 +1,66 @@
+From da60fd9ab614e27978fe9fb1e157d0212d43e967 Mon Sep 17 00:00:00 2001
+From: hasan <gungorbzk@gmail.com>
+Date: Sun, 18 Oct 2026 15:45:08 +0300
+Subject: [PATCH 16/17] KeyHandler: stronger Glyph Button haptics
+
+The vibrator HAL has no amplitude control or prebaked effects, so CLICK and
+HEAVY_CLICK became ~30/40 ms pulses that felt weak. Use 60 ms for a press
+and 80 ms when a hold becomes a long press.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../org/lineageos/settings/device/KeyHandler.java | 15 ++++++++++-----
+ 1 file changed, 10 insertions(+), 5 deletions(-)
+
+diff --git a/keyhandler/src/org/lineageos/settings/device/KeyHandler.java b/keyhandler/src/org/lineageos/settings/device/KeyHandler.java
+index 7f0f19d..57d2fb2 100644
+--- a/keyhandler/src/org/lineageos/settings/device/KeyHandler.java
++++ b/keyhandler/src/org/lineageos/settings/device/KeyHandler.java
+@@ -37,6 +37,10 @@ public class KeyHandler implements DeviceKeyHandler {
+     private static final String OPENGLYPH_PACKAGE = "org.openglyph";
+     private static final String EXTRA_EVENT = "event";
+     private static final long LONG_PRESS_MS = 600;
++    // The AW86938 HAL here has no amplitude control and no prebaked effects, so CLICK and
++    // HEAVY_CLICK fall back to ~30 / ~40 ms pulses; strength comes from length. Twice those.
++    private static final long PRESS_HAPTIC_MS = 60;
++    private static final long LONG_PRESS_HAPTIC_MS = 80;
+ 
+     // Hardware feedback, like the power button: unlike USAGE_TOUCH it is not dropped in
+     // battery saver, and its strength follows the touch feedback intensity setting.
+@@ -48,7 +52,7 @@ public class KeyHandler implements DeviceKeyHandler {
+     private final Handler mHandler;
+     private final Vibrator mVibrator;
+     // Heavy click when a held Glyph Button crosses LONG_PRESS_MS; cancelled on release.
+-    private final Runnable mLongPressHaptic = () -> haptic(VibrationEffect.EFFECT_HEAVY_CLICK);
++    private final Runnable mLongPressHaptic = () -> haptic(LONG_PRESS_HAPTIC_MS);
+ 
+     private String mTorchCameraId = null;
+     private boolean mTorchEnabled = false;
+@@ -111,7 +115,7 @@ public class KeyHandler implements DeviceKeyHandler {
+         if (event.getRepeatCount() > 0) return;
+         if (event.getAction() == KeyEvent.ACTION_DOWN) {
+             mHandler.post(() -> {
+-                haptic(VibrationEffect.EFFECT_CLICK);
++                haptic(PRESS_HAPTIC_MS);
+                 sendGlyphButton("down");
+             });
+             mHandler.postDelayed(mLongPressHaptic, LONG_PRESS_MS);
+@@ -125,11 +129,12 @@ public class KeyHandler implements DeviceKeyHandler {
+         }
+     }
+ 
+-    private void haptic(int effect) {
++    private void haptic(long ms) {
+         if (mVibrator == null || !mVibrator.hasVibrator()) return;
+         try {
+-            mVibrator.vibrate(VibrationEffect.createPredefined(effect), HAPTIC_ATTRS);
+-            Log.d(TAG, "Glyph Button haptic " + effect);
++            mVibrator.vibrate(VibrationEffect.createOneShot(ms, VibrationEffect.DEFAULT_AMPLITUDE),
++                    HAPTIC_ATTRS);
++            Log.d(TAG, "Glyph Button haptic " + ms + " ms");
+         } catch (Exception e) {
+             Log.w(TAG, "Glyph Button haptic failed", e);
+         }
+-- 
+2.56.0
+

@@ -1,0 +1,42 @@
+From d27a30c8f2f6df21e06a863b9b17c77ca712fadc Mon Sep 17 00:00:00 2001
+From: logix727 <logix727@users.noreply.github.com>
+Date: Tue, 4 Aug 2026 08:37:28 -0400
+Subject: [PATCH 2/2] kernel headers: support metroid prebuilt exports
+
+Change-Id: I79839510eb5c6feb672a5cea04377e0458b28318
+(cherry picked from commit 18f0d6bc7910f0b4a0e1a96b865434118aa7e1e9)
+---
+ build/soong/Android.bp | 10 ++++++++--
+ 1 file changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/build/soong/Android.bp b/build/soong/Android.bp
+index 237f7aa..67b7588 100644
+--- a/build/soong/Android.bp
++++ b/build/soong/Android.bp
+@@ -71,6 +71,11 @@ lineage_generator {
+         "usr/include/audio",
+         "usr/include/audio/include/uapi",
+         "usr/techpack/audio/include",
++        "usr/techpack/display/include",
++        "usr/techpack/camera/include",
++        "usr/techpack/eva/include",
++        "usr/techpack/synx/include",
++        "usr/techpack/vidc/include",
+     ],
+ 
+     tool_files: [":clean_headers.sh"],
+@@ -94,8 +99,9 @@ bootstrap_go_package {
+ 
+ cc_defaults {
+     name: "generated_kernel_header_defaults",
+-    generated_headers: ["generated_kernel_includes"],
+-    export_generated_headers: ["generated_kernel_includes"],
++    // metroid: prebuilt kernel — serve UAPI/techpack headers from the prebuilt tarball
++    generated_headers: ["prebuilt_kernel_includes"],
++    export_generated_headers: ["prebuilt_kernel_includes"],
+     vendor_available: true,
+     recovery_available: true,
+ }
+-- 
+2.56.0
+

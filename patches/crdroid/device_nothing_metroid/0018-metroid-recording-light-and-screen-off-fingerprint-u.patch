@@ -1,0 +1,98 @@
+From 3acbaba0d3e8779ad2f73210d3af8261a6fb95b4 Mon Sep 17 00:00:00 2001
+From: hasan <gungorbzk@gmail.com>
+Date: Mon, 19 Oct 2026 00:38:17 +0300
+Subject: [PATCH] metroid: recording light and screen-off fingerprint unlock
+
+- sepolicy: OpenGlyph opening the red LED's trigger failed: Java's
+  FileOutputStream fstat()s the node after open(), and system_app had no
+  getattr on vendor_sysfs_graphics. Allow it.
+- Screen-off fingerprint unlock: config_screen_off_udfps_enabled and
+  default_on, using the existing UDFPS doze sensor; MetroidDoze keeps the
+  touch gesture mode on while it is enabled (it reports the finger too).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../org/lineageos/settings/doze/TapToWake.kt  | 24 ++++++++++++-------
+ .../base/core/res/res/values/config.xml       |  5 ++++
+ sepolicy/vendor/openglyph.te                  |  3 ++-
+ 3 files changed, 22 insertions(+), 10 deletions(-)
+
+diff --git a/doze/src/org/lineageos/settings/doze/TapToWake.kt b/doze/src/org/lineageos/settings/doze/TapToWake.kt
+index 222b5b7..cd48df8 100644
+--- a/doze/src/org/lineageos/settings/doze/TapToWake.kt
++++ b/doze/src/org/lineageos/settings/doze/TapToWake.kt
+@@ -21,6 +21,8 @@ import java.io.File
+  * sleeps once its gesture mode is on. Stock turns the mode on itself and the stock power HAL does
+  * not handle the DOUBLE_TAP_TO_WAKE mode, so follow Settings.Secure.DOUBLE_TAP_TO_WAKE here. The
+  * driver takes the write only while the panel is awake, so apply on every screen on as well.
++ * The same gesture mode reports a finger on the fingerprint area (the UDFPS sensor), so it also
++ * stays on while screen-off fingerprint unlock is enabled.
+  */
+ object TapToWake {
+     private const val TAG = "TapToWake"
+@@ -32,13 +34,13 @@ object TapToWake {
+             return
+         }
+         val apply = { write(context, node) }
+-        context.contentResolver.registerContentObserver(
+-            Settings.Secure.getUriFor(Settings.Secure.DOUBLE_TAP_TO_WAKE),
+-            false,
+-            object : ContentObserver(Handler(Looper.getMainLooper())) {
+-                override fun onChange(selfChange: Boolean) = apply()
+-            },
+-        )
++        val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
++            override fun onChange(selfChange: Boolean) = apply()
++        }
++        for (key in listOf(Settings.Secure.DOUBLE_TAP_TO_WAKE, SCREEN_OFF_UDFPS)) {
++            context.contentResolver.registerContentObserver(
++                Settings.Secure.getUriFor(key), false, observer)
++        }
+         context.registerReceiver(
+             object : BroadcastReceiver() {
+                 override fun onReceive(context: Context, intent: Intent) = apply()
+@@ -48,10 +50,14 @@ object TapToWake {
+         apply()
+     }
+ 
++    // Settings.Secure.SCREEN_OFF_UNLOCK_UDFPS_ENABLED (hidden); on by default on this device
++    private const val SCREEN_OFF_UDFPS = "screen_off_udfps_enabled"
++
+     private fun write(context: Context, node: File) {
+         // def_double_tap_to_wake is true: on unless the user turned it off
+-        val on = Settings.Secure.getInt(
+-            context.contentResolver, Settings.Secure.DOUBLE_TAP_TO_WAKE, 1) != 0
++        val cr = context.contentResolver
++        val on = Settings.Secure.getInt(cr, Settings.Secure.DOUBLE_TAP_TO_WAKE, 1) != 0 ||
++            Settings.Secure.getInt(cr, SCREEN_OFF_UDFPS, 1) != 0
+         try {
+             node.writeText(if (on) "1" else "0")
+         } catch (e: Exception) {
+diff --git a/overlay/frameworks/base/core/res/res/values/config.xml b/overlay/frameworks/base/core/res/res/values/config.xml
+index f91c9e9..243a0fb 100644
+--- a/overlay/frameworks/base/core/res/res/values/config.xml
++++ b/overlay/frameworks/base/core/res/res/values/config.xml
+@@ -149,4 +149,9 @@
+     <string name="config_dozeTapSensorType" translatable="false">org.lineageos.sensor.single_touch</string>
+     <!-- Touching the fingerprint area while dozing (sensors.nothing UDFPS sensor) -->
+     <string name="config_dozeUdfpsLongPressSensorType" translatable="false">org.lineageos.sensor.udfps</string>
++    <!-- Screen-off fingerprint unlock: touching the sensor with the screen off wakes it and
++         unlocks (Settings > Security > Fingerprint, on by default). Needs the UDFPS sensor
++         above; MetroidDoze keeps the touch gesture mode on for it. -->
++    <bool name="config_screen_off_udfps_enabled">true</bool>
++    <bool name="config_screen_off_udfps_default_on">true</bool>
+ </resources>
+diff --git a/sepolicy/vendor/openglyph.te b/sepolicy/vendor/openglyph.te
+index 45be40f..047cf97 100644
+--- a/sepolicy/vendor/openglyph.te
++++ b/sepolicy/vendor/openglyph.te
+@@ -2,4 +2,5 @@
+ # vendor_sysfs_graphics for the lights HAL. OpenGlyph (system_app) only needs to select the
+ # timer trigger and set delay_on/delay_off on them, so: search the LED directory, write files.
+ allow system_app vendor_sysfs_graphics:dir search;
+-allow system_app vendor_sysfs_graphics:file w_file_perms;
++# getattr: Java's FileOutputStream fstat()s the node after opening it.
++allow system_app vendor_sysfs_graphics:file { w_file_perms getattr };
+-- 
+2.56.0
+

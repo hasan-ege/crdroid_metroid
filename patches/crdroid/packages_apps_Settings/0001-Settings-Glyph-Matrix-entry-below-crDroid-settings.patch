@@ -1,0 +1,145 @@
+From 99e735c65401a5357c8e8793ea448388ab2cb148 Mon Sep 17 00:00:00 2001
+From: hasan <hasan@localhost>
+Date: Sun, 18 Oct 2026 10:31:23 +0300
+Subject: [PATCH] Settings: Glyph Matrix entry below crDroid settings
+
+Nothing Phone (3) (metroid): homepage entry for OpenGlyph's settings
+(action org.openglyph.SETTINGS) right below crDroid settings, with a red
+background chip like the ic_homepage_* icons.
+---
+ res/drawable/ic_glyph_matrix_expressive.xml |  6 ++++++
+ res/drawable/ic_glyph_matrix_filled.xml     | 15 +++++++++++++++
+ res/drawable/ic_homepage_glyph_matrix.xml   | 16 ++++++++++++++++
+ res/values-tr/metroid_glyph.xml             |  4 ++++
+ res/values/metroid_glyph.xml                |  8 ++++++++
+ res/xml/top_level_settings.xml              |  9 +++++++++
+ res/xml/top_level_settings_expressive.xml   |  9 +++++++++
+ 7 files changed, 67 insertions(+)
+ create mode 100644 res/drawable/ic_glyph_matrix_expressive.xml
+ create mode 100644 res/drawable/ic_glyph_matrix_filled.xml
+ create mode 100644 res/drawable/ic_homepage_glyph_matrix.xml
+ create mode 100644 res/values-tr/metroid_glyph.xml
+ create mode 100644 res/values/metroid_glyph.xml
+
+diff --git a/res/drawable/ic_glyph_matrix_expressive.xml b/res/drawable/ic_glyph_matrix_expressive.xml
+new file mode 100644
+index 00000000..e75dc7fb
+--- /dev/null
++++ b/res/drawable/ic_glyph_matrix_expressive.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Glyph Matrix (OpenGlyph) homepage icon, tinted like the other expressive icons. -->
++<com.android.settings.widget.TintDrawable
++    xmlns:android="http://schemas.android.com/apk/res/android"
++    android:drawable="@drawable/ic_glyph_matrix_filled"
++    android:tint="@color/homepage_glyph_matrix_foreground" />
+diff --git a/res/drawable/ic_glyph_matrix_filled.xml b/res/drawable/ic_glyph_matrix_filled.xml
+new file mode 100644
+index 00000000..49298ddb
+--- /dev/null
++++ b/res/drawable/ic_glyph_matrix_filled.xml
+@@ -0,0 +1,15 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Settings tile icon: a round matrix of dots. -->
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    android:width="24dp"
++    android:height="24dp"
++    android:viewportWidth="24"
++    android:viewportHeight="24"
++    android:tint="?android:attr/colorControlNormal">
++    <path
++        android:fillColor="@android:color/white"
++        android:pathData="M12,2A10,10 0 1,1 12,22A10,10 0 1,1 12,2ZM12,4A8,8 0 1,0 12,20A8,8 0 1,0 12,4Z" />
++    <path
++        android:fillColor="@android:color/white"
++        android:pathData="M8,8m-1.2,0a1.2,1.2 0,1 1,2.4 0a1.2,1.2 0,1 1,-2.4 0M12,8m-1.2,0a1.2,1.2 0,1 1,2.4 0a1.2,1.2 0,1 1,-2.4 0M16,8m-1.2,0a1.2,1.2 0,1 1,2.4 0a1.2,1.2 0,1 1,-2.4 0M8,12m-1.2,0a1.2,1.2 0,1 1,2.4 0a1.2,1.2 0,1 1,-2.4 0M12,12m-1.2,0a1.2,1.2 0,1 1,2.4 0a1.2,1.2 0,1 1,-2.4 0M16,12m-1.2,0a1.2,1.2 0,1 1,2.4 0a1.2,1.2 0,1 1,-2.4 0M8,16m-1.2,0a1.2,1.2 0,1 1,2.4 0a1.2,1.2 0,1 1,-2.4 0M12,16m-1.2,0a1.2,1.2 0,1 1,2.4 0a1.2,1.2 0,1 1,-2.4 0M16,16m-1.2,0a1.2,1.2 0,1 1,2.4 0a1.2,1.2 0,1 1,-2.4 0" />
++</vector>
+diff --git a/res/drawable/ic_homepage_glyph_matrix.xml b/res/drawable/ic_homepage_glyph_matrix.xml
+new file mode 100644
+index 00000000..e0d7ece9
+--- /dev/null
++++ b/res/drawable/ic_homepage_glyph_matrix.xml
+@@ -0,0 +1,16 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Glyph Matrix homepage icon on a coloured background chip, like ic_homepage_*. -->
++<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
++    <item>
++        <com.android.settingslib.widget.AdaptiveIconShapeDrawable
++            android:width="@dimen/dashboard_tile_image_size"
++            android:height="@dimen/dashboard_tile_image_size"
++            android:color="@color/homepage_glyph_matrix_background" />
++    </item>
++    <item
++        android:width="@dimen/dashboard_tile_foreground_image_size"
++        android:height="@dimen/dashboard_tile_foreground_image_size"
++        android:start="@dimen/dashboard_tile_foreground_image_inset"
++        android:top="@dimen/dashboard_tile_foreground_image_inset"
++        android:drawable="@drawable/ic_glyph_matrix_expressive" />
++</layer-list>
+diff --git a/res/values-tr/metroid_glyph.xml b/res/values-tr/metroid_glyph.xml
+new file mode 100644
+index 00000000..79cfc9d8
+--- /dev/null
++++ b/res/values-tr/metroid_glyph.xml
+@@ -0,0 +1,4 @@
++<?xml version="1.0" encoding="utf-8"?>
++<resources>
++    <string name="glyph_matrix_settings_summary">Bildirimler, oyuncaklar, her zaman açık ve kayıt ışığı</string>
++</resources>
+diff --git a/res/values/metroid_glyph.xml b/res/values/metroid_glyph.xml
+new file mode 100644
+index 00000000..a82f2d85
+--- /dev/null
++++ b/res/values/metroid_glyph.xml
+@@ -0,0 +1,8 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Nothing Phone (3) (metroid): Settings homepage entry for OpenGlyph's Glyph Matrix settings. -->
++<resources>
++    <color name="homepage_glyph_matrix_background">@color/homepage_red_bg</color>
++    <color name="homepage_glyph_matrix_foreground">@color/homepage_red_fg</color>
++    <string name="glyph_matrix_settings_title">Glyph Matrix</string>
++    <string name="glyph_matrix_settings_summary">Notifications, toys, always-on and recording light</string>
++</resources>
+diff --git a/res/xml/top_level_settings.xml b/res/xml/top_level_settings.xml
+index e372ed0f..e626f790 100644
+--- a/res/xml/top_level_settings.xml
++++ b/res/xml/top_level_settings.xml
+@@ -65,6 +65,15 @@
+             android:summary="@string/crdroid_settings_summary"
+             settings:controller="com.crdroid.settings.TopLevelSettingsPreferenceController"/>
+ 
++        <com.android.settings.widget.HomepagePreference
++            android:icon="@drawable/ic_homepage_glyph_matrix"
++            android:key="top_level_glyph_matrix"
++            android:order="-50"
++            android:title="@string/glyph_matrix_settings_title"
++            android:summary="@string/glyph_matrix_settings_summary">
++            <intent android:action="org.openglyph.SETTINGS" />
++        </com.android.settings.widget.HomepagePreference>
++
+         <com.android.settings.widget.HomepagePreference
+             android:fragment="com.android.settings.applications.AppDashboardFragment"
+             android:icon="@drawable/ic_apps_filled"
+diff --git a/res/xml/top_level_settings_expressive.xml b/res/xml/top_level_settings_expressive.xml
+index 1e60fe53..ae6f0ca9 100644
+--- a/res/xml/top_level_settings_expressive.xml
++++ b/res/xml/top_level_settings_expressive.xml
+@@ -61,6 +61,15 @@
+             android:summary="@string/crdroid_settings_summary"
+             settings:controller="com.crdroid.settings.TopLevelSettingsPreferenceController"/>
+ 
++        <com.android.settings.widget.HomepagePreference
++            android:icon="@drawable/ic_homepage_glyph_matrix"
++            android:key="top_level_glyph_matrix"
++            android:order="-55"
++            android:title="@string/glyph_matrix_settings_title"
++            android:summary="@string/glyph_matrix_settings_summary">
++            <intent android:action="org.openglyph.SETTINGS" />
++        </com.android.settings.widget.HomepagePreference>
++
+         <com.android.settings.widget.HomepagePreference
+             android:fragment="com.android.settings.notification.ConfigureNotificationSettings"
+             android:icon="@drawable/ic_notifications_filled"
+-- 
+2.56.0
+

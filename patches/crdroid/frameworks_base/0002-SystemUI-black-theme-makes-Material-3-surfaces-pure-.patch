@@ -1,0 +1,64 @@
+From 3a50b5ad32aae8f1abc6789e5e3373ed1e207efb Mon Sep 17 00:00:00 2001
+From: hasan <gungorbzk@gmail.com>
+Date: Mon, 19 Oct 2026 03:52:22 +0300
+Subject: [PATCH] SystemUI: black theme makes Material 3 surfaces pure black
+
+The black theme only replaced the neutral palette, while the shade, Quick
+Settings and settings pages draw from the dynamic surface colors. With it on,
+the dark surfaces become #000000, upper container levels a hair lighter.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../theme/ThemeOverlayController.java         | 25 ++++++++++++++++++-
+ 1 file changed, 24 insertions(+), 1 deletion(-)
+
+diff --git a/packages/SystemUI/src/com/android/systemui/theme/ThemeOverlayController.java b/packages/SystemUI/src/com/android/systemui/theme/ThemeOverlayController.java
+index aa20b9159..6c54bae8a 100644
+--- a/packages/SystemUI/src/com/android/systemui/theme/ThemeOverlayController.java
++++ b/packages/SystemUI/src/com/android/systemui/theme/ThemeOverlayController.java
+@@ -727,6 +727,9 @@ public class ThemeOverlayController implements CoreStartable, Dumpable {
+                 luminanceFactor, chromaFactor, wholePalette, tintBg, bgColor);
+         mColorScheme = isNightMode() ? mDarkColorScheme : mLightColorScheme;
+ 
++        mBlackSurfaces = LineageSettings.Secure.getIntForUser(mContext.getContentResolver(),
++                LineageSettings.Secure.BERRY_BLACK_THEME, 0, mUserTracker.getUserId()) == 1;
++
+         mAccentOverlay = newFabricatedOverlay("accent");
+         assignColorsToOverlay(mAccentOverlay, DynamicColors.getAllAccentPalette(), false);
+ 
+@@ -755,11 +758,31 @@ public class ThemeOverlayController implements CoreStartable, Dumpable {
+ 
+             overlay.setResourceValue(prefix + "_light", TYPE_INT_COLOR_ARGB8,
+                     p.second.getArgb(mLightColorScheme.getMaterialScheme()), null);
++            Integer black = mBlackSurfaces ? BLACK_SURFACES.get(p.first) : null;
+             overlay.setResourceValue(prefix + "_dark", TYPE_INT_COLOR_ARGB8,
+-                    p.second.getArgb(mDarkColorScheme.getMaterialScheme()), null);
++                    black != null ? black : p.second.getArgb(mDarkColorScheme.getMaterialScheme()),
++                    null);
+         });
+     }
+ 
++    /**
++     * Black theme, dark side: Material 3 surfaces (the shade, Quick Settings, settings pages,
++     * cards) come from these dynamic colors rather than the neutral palette, so they are made
++     * pure black for AMOLED, with the upper container levels a hair lighter so cards still
++     * stand apart.
++     */
++    private boolean mBlackSurfaces;
++    private static final java.util.Map<String, Integer> BLACK_SURFACES = java.util.Map.of(
++            "background", 0xFF000000,
++            "surface", 0xFF000000,
++            "surface_dim", 0xFF000000,
++            "surface_container_lowest", 0xFF000000,
++            "surface_container_low", 0xFF000000,
++            "surface_container", 0xFF050505,
++            "surface_container_high", 0xFF0D0D0D,
++            "surface_container_highest", 0xFF161616,
++            "surface_bright", 0xFF1E1E1E);
++
+     /**
+      * Checks if the color scheme in mColorScheme matches the current system palettes.
+      *
+-- 
+2.56.0
+

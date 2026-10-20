@@ -1,0 +1,66 @@
+From c81b223ee99b12694def2663751b3e7872602ead Mon Sep 17 00:00:00 2001
+From: hasan <hasan@localhost>
+Date: Sat, 17 Oct 2026 23:39:01 +0300
+Subject: [PATCH 1/5] sepolicy: use the common qcom-battery label
+
+device/qcom/sepolicy_vndr now labels /sys/class/qcom-battery as
+vendor_sysfs_battery_supply for every device (490d47f, 'Label
+/sys/class/qcom-battery for everyone'). Our own genfscon for the same path
+made checkpolicy fail with a duplicate entry. Drop it and the
+vendor_sysfs_qcom_battery type, and point hal_usb at the common type.
+---
+ sepolicy/vendor/file.te        | 1 -
+ sepolicy/vendor/genfs_contexts | 1 -
+ sepolicy/vendor/hal_charge.te  | 2 --
+ sepolicy/vendor/hal_usb.te     | 4 ++--
+ 4 files changed, 2 insertions(+), 6 deletions(-)
+
+diff --git a/sepolicy/vendor/file.te b/sepolicy/vendor/file.te
+index b5c1a43..548b9bb 100644
+--- a/sepolicy/vendor/file.te
++++ b/sepolicy/vendor/file.te
+@@ -4,7 +4,6 @@ type audio_socket, file_type;
+ # Battery
+ type vendor_proc_charge, fs_type, proc_type;
+ type vendor_proc_touchpanel, fs_type, proc_type;
+-type vendor_sysfs_qcom_battery, fs_type, sysfs_type;
+ 
+ # Camera
+ 
+diff --git a/sepolicy/vendor/genfs_contexts b/sepolicy/vendor/genfs_contexts
+index da6c9c1..0fdcfe7 100644
+--- a/sepolicy/vendor/genfs_contexts
++++ b/sepolicy/vendor/genfs_contexts
+@@ -1,7 +1,6 @@
+ # Battery
+ genfscon proc /charger u:object_r:vendor_proc_charge:s0
+ genfscon proc /touchpanel u:object_r:vendor_proc_touchpanel:s0
+-genfscon sysfs /class/qcom-battery u:object_r:vendor_sysfs_qcom_battery:s0
+ 
+ # Camera
+ 
+diff --git a/sepolicy/vendor/hal_charge.te b/sepolicy/vendor/hal_charge.te
+index 1430294..0d048f5 100644
+--- a/sepolicy/vendor/hal_charge.te
++++ b/sepolicy/vendor/hal_charge.te
+@@ -14,8 +14,6 @@ allow vendor_hal_charge_default vendor_proc_charge:dir r_dir_perms;
+ allow vendor_hal_charge_default vendor_proc_charge:file rw_file_perms;
+ allow vendor_hal_charge_default vendor_proc_touchpanel:dir r_dir_perms;
+ allow vendor_hal_charge_default vendor_proc_touchpanel:file rw_file_perms;
+-allow vendor_hal_charge_default vendor_sysfs_qcom_battery:dir r_dir_perms;
+-allow vendor_hal_charge_default vendor_sysfs_qcom_battery:file rw_file_perms;
+ allow vendor_hal_charge_default vendor_sysfs_battery_supply:dir r_dir_perms;
+ allow vendor_hal_charge_default vendor_sysfs_battery_supply:file rw_file_perms;
+ allow vendor_hal_charge_default vendor_sysfs_usb_supply:dir r_dir_perms;
+diff --git a/sepolicy/vendor/hal_usb.te b/sepolicy/vendor/hal_usb.te
+index 75dcd9c..e4bb0ce 100644
+--- a/sepolicy/vendor/hal_usb.te
++++ b/sepolicy/vendor/hal_usb.te
+@@ -1,2 +1,2 @@
+-allow vendor_hal_usb_qti vendor_sysfs_qcom_battery:dir r_dir_perms;
+-allow vendor_hal_usb_qti vendor_sysfs_qcom_battery:file rw_file_perms;
++allow vendor_hal_usb_qti vendor_sysfs_battery_supply:dir r_dir_perms;
++allow vendor_hal_usb_qti vendor_sysfs_battery_supply:file rw_file_perms;
+-- 
+2.56.0
+

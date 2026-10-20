@@ -1,0 +1,41 @@
+From 0188e32d03e9522ec498b3b60aa25084e018ee2f Mon Sep 17 00:00:00 2001
+From: hasan <gungorbzk@gmail.com>
+Date: Sun, 18 Oct 2026 11:26:13 +0300
+Subject: [PATCH] KeyHandler: Glyph Button haptics as hardware feedback
+
+USAGE_TOUCH vibrations are ignored in battery saver; physical buttons use
+USAGE_HARDWARE_FEEDBACK, which is allowed there and with the screen off.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../src/org/lineageos/settings/device/KeyHandler.java       | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/keyhandler/src/org/lineageos/settings/device/KeyHandler.java b/keyhandler/src/org/lineageos/settings/device/KeyHandler.java
+index c61822b..7f0f19d 100644
+--- a/keyhandler/src/org/lineageos/settings/device/KeyHandler.java
++++ b/keyhandler/src/org/lineageos/settings/device/KeyHandler.java
+@@ -38,9 +38,10 @@ public class KeyHandler implements DeviceKeyHandler {
+     private static final String EXTRA_EVENT = "event";
+     private static final long LONG_PRESS_MS = 600;
+ 
+-    // Touch usage: follows Settings > Sound & vibration > Touch feedback.
++    // Hardware feedback, like the power button: unlike USAGE_TOUCH it is not dropped in
++    // battery saver, and its strength follows the touch feedback intensity setting.
+     private static final VibrationAttributes HAPTIC_ATTRS =
+-            VibrationAttributes.createForUsage(VibrationAttributes.USAGE_TOUCH);
++            VibrationAttributes.createForUsage(VibrationAttributes.USAGE_HARDWARE_FEEDBACK);
+ 
+     private final Context mContext;
+     private final CameraManager mCameraManager;
+@@ -128,6 +129,7 @@ public class KeyHandler implements DeviceKeyHandler {
+         if (mVibrator == null || !mVibrator.hasVibrator()) return;
+         try {
+             mVibrator.vibrate(VibrationEffect.createPredefined(effect), HAPTIC_ATTRS);
++            Log.d(TAG, "Glyph Button haptic " + effect);
+         } catch (Exception e) {
+             Log.w(TAG, "Glyph Button haptic failed", e);
+         }
+-- 
+2.56.0
+

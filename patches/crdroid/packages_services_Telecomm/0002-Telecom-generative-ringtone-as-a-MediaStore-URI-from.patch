@@ -1,0 +1,51 @@
+From 6c081178b221dd8bd52361b3fe91d33ff9e940a9 Mon Sep 17 00:00:00 2001
+From: hasan <gungorbzk@gmail.com>
+Date: Mon, 19 Oct 2026 17:50:40 +0300
+Subject: [PATCH] Telecom: generative ringtone as a MediaStore URI from
+ OpenGlyph
+
+OpenGlyph's own storage is not readable by system_server (SELinux) nor by
+SystemUI's ringtone player, so ask it for the ringtone with call() and play
+the MediaStore URI it returns.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../android/server/telecom/RingtoneFactory.java   | 15 +++++++++++----
+ 1 file changed, 11 insertions(+), 4 deletions(-)
+
+diff --git a/src/com/android/server/telecom/RingtoneFactory.java b/src/com/android/server/telecom/RingtoneFactory.java
+index ab6940d..018b25a 100644
+--- a/src/com/android/server/telecom/RingtoneFactory.java
++++ b/src/com/android/server/telecom/RingtoneFactory.java
+@@ -150,7 +150,8 @@ public class RingtoneFactory {
+     private static final String GENERATIVE_RINGTONE_AUTHORITY = "org.openglyph.ringtone";
+ 
+     /**
+-     * content://org.openglyph.ringtone/caller/<sha-256 of the number's last 10 digits>, or null
++     * The caller's generative ringtone from OpenGlyph, asked for by the SHA-256 of the number's
++     * last 10 digits (a MediaStore URI), or null
+      * when the setting is off, the number is hidden or OpenGlyph is missing. Only a hash leaves
+      * Telecom, and the same caller always maps to the same sound, whatever the number's format.
+      */
+@@ -175,9 +176,15 @@ public class RingtoneFactory {
+                     .digest(digits.getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+             StringBuilder key = new StringBuilder();
+             for (byte b : hash) key.append(String.format("%02x", b));
+-            return new Uri.Builder().scheme("content").authority(GENERATIVE_RINGTONE_AUTHORITY)
+-                    .appendPath("caller").appendPath(key.toString()).build();
+-        } catch (java.security.NoSuchAlgorithmException e) {
++            // OpenGlyph makes the caller's ringtone and hands back a MediaStore URI, which both
++            // Telecom and SystemUI's ringtone player may read.
++            android.os.Bundle r = userContext.getContentResolver().call(
++                    Uri.parse("content://" + GENERATIVE_RINGTONE_AUTHORITY), "ringtone",
++                    key.toString(), null);
++            String uri = r == null ? null : r.getString("uri");
++            return uri == null ? null : Uri.parse(uri);
++        } catch (Exception e) {
++            Log.w(this, "generativeRingtoneUri: %s", e);
+             return null;
+         }
+     }
+-- 
+2.56.0
+

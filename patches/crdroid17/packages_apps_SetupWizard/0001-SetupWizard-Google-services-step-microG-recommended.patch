@@ -1,0 +1,226 @@
+From 767cfbf1a557d85bf20441d2a074dc5751540a3e Mon Sep 17 00:00:00 2001
+From: hasan <gungorbzk@gmail.com>
+Date: Mon, 19 Oct 2026 07:33:31 +0300
+Subject: [PATCH 1/2] SetupWizard: Google services step (microG recommended)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ app/src/main/AndroidManifest.xml              | 12 ++++
+ .../privacy/GoogleServicesActivity.kt         | 65 +++++++++++++++++++
+ .../main/res/drawable/ic_google_services.xml  | 12 ++++
+ .../main/res/layout/setup_google_services.xml | 41 ++++++++++++
+ .../main/res/raw/lineage_wizard_script.xml    |  6 ++
+ app/src/main/res/values-tr/strings.xml        |  3 +
+ app/src/main/res/values/strings.xml           |  3 +
+ 7 files changed, 142 insertions(+)
+ create mode 100644 app/src/main/java/org/lineageos/setupwizard/privacy/GoogleServicesActivity.kt
+ create mode 100644 app/src/main/res/drawable/ic_google_services.xml
+ create mode 100644 app/src/main/res/layout/setup_google_services.xml
+
+diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
+index 79f47ed..7557200 100644
+--- a/app/src/main/AndroidManifest.xml
++++ b/app/src/main/AndroidManifest.xml
+@@ -180,6 +180,18 @@
+             </intent-filter>
+         </activity>
+ 
++        <activity
++            android:name=".privacy.GoogleServicesActivity"
++            android:label="@string/activity_label_empty"
++            android:immersive="true"
++            android:exported="false"
++            android:windowSoftInputMode="stateAlwaysHidden">
++            <intent-filter>
++                <action android:name="org.lineageos.setupwizard.GOOGLE_SERVICES" />
++                <category android:name="android.intent.category.DEFAULT" />
++            </intent-filter>
++        </activity>
++
+         <activity
+             android:name=".privacy.LocationSettingsActivity"
+             android:label="@string/activity_label_empty"
+diff --git a/app/src/main/java/org/lineageos/setupwizard/privacy/GoogleServicesActivity.kt b/app/src/main/java/org/lineageos/setupwizard/privacy/GoogleServicesActivity.kt
+new file mode 100644
+index 0000000..6f455ef
+--- /dev/null
++++ b/app/src/main/java/org/lineageos/setupwizard/privacy/GoogleServicesActivity.kt
+@@ -0,0 +1,65 @@
++/*
++ * SPDX-FileCopyrightText: The LineageOS Project
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++package org.lineageos.setupwizard.privacy
++
++import android.content.pm.PackageManager
++import android.os.Bundle
++import android.widget.RadioButton
++import com.google.android.setupcompat.util.ResultCodes.RESULT_SKIP
++import org.lineageos.setupwizard.R
++import org.lineageos.setupwizard.base.BaseSetupWizardActivity
++
++/**
++ * Google services: microG (preinstalled, the default) or none. Choosing none disables the
++ * microG apps for this user; they can be enabled again in Settings > Apps. Builds without
++ * microG skip this step.
++ */
++class GoogleServicesActivity : BaseSetupWizardActivity() {
++
++    private val microg by lazy { findViewById<RadioButton>(R.id.google_services_microg) }
++
++    override fun onCreate(savedInstanceState: Bundle?) {
++        super.onCreate(savedInstanceState)
++        if (!installed(MICROG[0])) {
++            finishAction(RESULT_SKIP)
++            return
++        }
++        val state = packageManager.getApplicationEnabledSetting(MICROG[0])
++        val on = state != PackageManager.COMPONENT_ENABLED_STATE_DISABLED_USER &&
++            state != PackageManager.COMPONENT_ENABLED_STATE_DISABLED
++        microg.isChecked = on
++        findViewById<RadioButton>(R.id.google_services_none).isChecked = !on
++    }
++
++    private fun installed(pkg: String) = try {
++        packageManager.getApplicationInfo(pkg, PackageManager.MATCH_DISABLED_COMPONENTS)
++        true
++    } catch (e: PackageManager.NameNotFoundException) {
++        false
++    }
++
++    override fun onNextPressed() {
++        val state = if (microg.isChecked) {
++            PackageManager.COMPONENT_ENABLED_STATE_DEFAULT
++        } else {
++            PackageManager.COMPONENT_ENABLED_STATE_DISABLED_USER
++        }
++        for (pkg in MICROG) {
++            if (installed(pkg)) packageManager.setApplicationEnabledSetting(pkg, state, 0)
++        }
++        super.onNextPressed()
++    }
++
++    override val layoutResId = R.layout.setup_google_services
++
++    override val titleResId = R.string.setup_google_services
++
++    override val iconResId = R.drawable.ic_google_services
++
++    companion object {
++        private val MICROG = arrayOf("com.google.android.gms", "com.android.vending")
++    }
++}
+diff --git a/app/src/main/res/drawable/ic_google_services.xml b/app/src/main/res/drawable/ic_google_services.xml
+new file mode 100644
+index 0000000..e4ec6c1
+--- /dev/null
++++ b/app/src/main/res/drawable/ic_google_services.xml
+@@ -0,0 +1,12 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Google services: a cloud. -->
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    android:width="24dp"
++    android:height="24dp"
++    android:viewportWidth="24"
++    android:viewportHeight="24"
++    android:tint="?android:attr/colorAccent">
++    <path
++        android:fillColor="@android:color/white"
++        android:pathData="M19.35,10.04C18.67,6.59 15.64,4 12,4 9.11,4 6.6,5.64 5.35,8.04 2.34,8.36 0,10.91 0,14c0,3.31 2.69,6 6,6h13c2.76,0 5,-2.24 5,-5 0,-2.64 -2.05,-4.78 -4.65,-4.96z" />
++</vector>
+diff --git a/app/src/main/res/layout/setup_google_services.xml b/app/src/main/res/layout/setup_google_services.xml
+new file mode 100644
+index 0000000..6626c57
+--- /dev/null
++++ b/app/src/main/res/layout/setup_google_services.xml
+@@ -0,0 +1,41 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     SPDX-FileCopyrightText: The LineageOS Project
++     SPDX-License-Identifier: Apache-2.0
++-->
++<com.google.android.setupdesign.GlifLayout
++    xmlns:android="http://schemas.android.com/apk/res/android"
++    android:id="@+id/setup_wizard_layout"
++    android:layout_width="match_parent"
++    android:layout_height="match_parent">
++
++    <LinearLayout
++        android:orientation="vertical"
++        android:layout_width="match_parent"
++        android:layout_height="match_parent"
++        style="@style/SudContentFrame">
++
++        <RadioGroup
++            android:id="@+id/google_services"
++            android:orientation="vertical"
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:paddingLeft="@dimen/location_margin_left"
++            android:paddingRight="@dimen/content_margin_right">
++
++            <RadioButton
++                android:id="@+id/google_services_microg"
++                android:layout_width="match_parent"
++                android:layout_height="wrap_content"
++                android:minHeight="56dp"
++                android:text="@string/google_services_microg" />
++
++            <RadioButton
++                android:id="@+id/google_services_none"
++                android:layout_width="match_parent"
++                android:layout_height="wrap_content"
++                android:minHeight="56dp"
++                android:text="@string/google_services_none" />
++        </RadioGroup>
++    </LinearLayout>
++</com.google.android.setupdesign.GlifLayout>
+diff --git a/app/src/main/res/raw/lineage_wizard_script.xml b/app/src/main/res/raw/lineage_wizard_script.xml
+index f2694fa..814a003 100644
+--- a/app/src/main/res/raw/lineage_wizard_script.xml
++++ b/app/src/main/res/raw/lineage_wizard_script.xml
+@@ -55,6 +55,12 @@
+     <WizardAction
+         id="location_settings"
+         wizard:uri="intent:#Intent;action=org.lineageos.setupwizard.LINEAGE_LOCATION_SETTINGS;end">
++        <result wizard:action="google_services" />
++    </WizardAction>
++
++    <WizardAction
++        id="google_services"
++        wizard:uri="intent:#Intent;action=org.lineageos.setupwizard.GOOGLE_SERVICES;end">
+         <result wizard:action="device_specific" />
+     </WizardAction>
+ 
+diff --git a/app/src/main/res/values-tr/strings.xml b/app/src/main/res/values-tr/strings.xml
+index e888b32..8ed0977 100644
+--- a/app/src/main/res/values-tr/strings.xml
++++ b/app/src/main/res/values-tr/strings.xml
+@@ -29,6 +29,9 @@
+     <string name="intro_restore_subtitle"><xliff:g id="name" example="crDroid">%s</xliff:g> veya başka bir işletim sisteminden bir Seedvault yedeğiniz varsa, buradan geri yükleyebilirsiniz.</string>
+     <string name="intro_restore_button">Yedekten geri yükle</string>
+     <string name="setup_location">Konum servisleri</string>
++    <string name="setup_google_services">Google hizmetleri</string>
++    <string name="google_services_microg">microG (önerilen)</string>
++    <string name="google_services_none">Google hizmetleri olmadan</string>
+     <string name="location_access_summary"><b>Konum bilginizi isteyen uygulamalara izin ver.</b> Bu geçerli konumunuzu ve geçmiş konumlarınızı içerebilir.</string>
+     <string name="location_agps_access_summary">GPS\'inizin başlama süresini büyük ölçüde hızlandırmak için &lt;b&gt;internetten uydu yardım verilerini indirin.&lt;b&gt;</string>
+     <string name="update_recovery_title">crDroid Kurtarma Modunu Güncelle</string>
+diff --git a/app/src/main/res/values/strings.xml b/app/src/main/res/values/strings.xml
+index 63a45aa..e3de4eb 100644
+--- a/app/src/main/res/values/strings.xml
++++ b/app/src/main/res/values/strings.xml
+@@ -70,6 +70,9 @@
+ 
+     <!-- Location page -->
+     <string name="setup_location">Location services</string>
++    <string name="setup_google_services">Google services</string>
++    <string name="google_services_microg">microG (recommended)</string>
++    <string name="google_services_none">No Google services</string>
+     <string name="location_summary">Choose how your device manages its location</string>
+     <string name="location_access_title">Use location</string>
+     <string name="location_agps_access_title">Enhanced location</string>
+-- 
+2.56.0
+

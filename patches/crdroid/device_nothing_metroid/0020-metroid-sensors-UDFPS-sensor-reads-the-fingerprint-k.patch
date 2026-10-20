@@ -1,0 +1,169 @@
+From ecff0f16b60c87172c0342da69b5f611787fb2fe Mon Sep 17 00:00:00 2001
+From: hasan <gungorbzk@gmail.com>
+Date: Mon, 19 Oct 2026 02:07:55 +0300
+Subject: [PATCH] metroid: sensors: UDFPS sensor reads the fingerprint key from
+ fts_ts
+
+The Focaltech driver has no fts_gesture_fod_pressed node, so the UDFPS doze
+sensor never fired and screen-off fingerprint unlock did nothing. A finger on
+the fingerprint area while the screen sleeps arrives as key 249 on the fts_ts
+input device: read that instead and report the sensor centre (630, 2539).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ sensors/Sensor.cpp             | 78 +++++++++++++++++++++++-----------
+ sepolicy/vendor/genfs_contexts |  1 -
+ sepolicy/vendor/hal_sensors.te |  3 ++
+ 3 files changed, 56 insertions(+), 26 deletions(-)
+
+diff --git a/sensors/Sensor.cpp b/sensors/Sensor.cpp
+index 4c6b4ef..7f49630 100644
+--- a/sensors/Sensor.cpp
++++ b/sensors/Sensor.cpp
+@@ -21,6 +21,12 @@
+ #include <utils/SystemClock.h>
+ 
+ #include <cmath>
++#include <cstring>
++#include <string>
++
++#include <dirent.h>
++#include <linux/input.h>
++#include <sys/ioctl.h>
+ 
+ namespace {
+ 
+@@ -53,30 +59,45 @@ static bool readTapState(int fd, int& screenX, int& screenY) {
+     return true;
+ }
+ 
+-static bool readFpState(int fd, int& screenX, int& screenY) {
+-    char buffer[512];
+-    int state = 0;
+-    int rc;
+-
+-    rc = lseek(fd, 0, SEEK_SET);
+-    if (rc) {
+-        ALOGE("failed to seek: %d", rc);
+-        return false;
+-    }
+-
+-    rc = read(fd, &buffer, sizeof(buffer));
+-    if (rc < 0) {
+-        ALOGE("failed to read state: %d", rc);
+-        return false;
++static constexpr const char* kTouchDeviceName = "fts_ts";
++static constexpr int kFodKey = 249;  // 0xf9
++static constexpr int kUdfpsX = 630;
++static constexpr int kUdfpsY = 2539;
++
++/** Opens /dev/input/eventN of the input device with this name, or returns -1. */
++static int openInputDevice(const char* name) {
++    DIR* dir = opendir("/dev/input");
++    if (dir == nullptr) return -1;
++    int found = -1;
++    while (dirent* entry = readdir(dir)) {
++        if (strncmp(entry->d_name, "event", 5) != 0) continue;
++        std::string path = std::string("/dev/input/") + entry->d_name;
++        int fd = open(path.c_str(), O_RDONLY | O_NONBLOCK | O_CLOEXEC);
++        if (fd < 0) continue;
++        char devName[64] = {};
++        if (ioctl(fd, EVIOCGNAME(sizeof(devName) - 1), devName) > 0 && strcmp(devName, name) == 0) {
++            found = fd;
++            break;
++        }
++        close(fd);
+     }
++    closedir(dir);
++    return found;
++}
+ 
+-    rc = sscanf(buffer, "%d,%d,%d", &screenX, &screenY, &state);
+-    if (rc < 0) {
+-        ALOGE("failed to parse fp state: %d", rc);
+-        return false;
++/** Drains pending input events; true if the fingerprint-area key went down among them. */
++static bool readFodDown(int fd) {
++    input_event events[32];
++    bool down = false;
++    ssize_t n;
++    while ((n = read(fd, events, sizeof(events))) > 0) {
++        for (size_t i = 0; i < n / sizeof(input_event); i++) {
++            if (events[i].type == EV_KEY && events[i].code == kFodKey && events[i].value == 1) {
++                down = true;
++            }
++        }
+     }
+-
+-    return state > 0;
++    return down;
+ }
+ 
+ }  // anonymous namespace
+@@ -271,9 +292,11 @@ UdfpsSensor::UdfpsSensor(int32_t sensorHandle, ISensorsEventCallback* callback)
+         ALOGE("failed to open wait pipe: %d", rc);
+     }
+ 
+-    mPollFd = open("/sys/devices/platform/soc/ac0000.qcom,qupv3_1_geni_se/a90000.spi/spi_master/spi4/spi4.0/fts_gesture_fod_pressed", O_RDONLY);
++    // The Focaltech driver has no fod_pressed node: a finger on the fingerprint area while the
++    // screen sleeps (gesture mode on) arrives as key 249 on its input device instead.
++    mPollFd = openInputDevice(kTouchDeviceName);
+     if (mPollFd < 0) {
+-        ALOGE("failed to open poll fd: %d", mPollFd);
++        ALOGE("failed to open the %s input device", kTouchDeviceName);
+     }
+ 
+     if (mWaitPipeFd[0] < 0 || mWaitPipeFd[1] < 0 || mPollFd < 0) {
+@@ -288,7 +311,7 @@ UdfpsSensor::UdfpsSensor(int32_t sensorHandle, ISensorsEventCallback* callback)
+ 
+     mPolls[1] = {
+             .fd = mPollFd,
+-            .events = POLLERR | POLLPRI,
++            .events = POLLIN,
+     };
+ }
+ 
+@@ -301,6 +324,8 @@ void UdfpsSensor::activate(bool enable) {
+ 
+     if (mIsEnabled != enable) {
+         mIsEnabled = enable;
++        // Touches from while it was off are old news: arm on a clean queue.
++        if (enable && mPollFd >= 0) readFodDown(mPollFd);
+ 
+         interruptPoll();
+         mWaitCV.notify_all();
+@@ -332,7 +357,10 @@ void UdfpsSensor::run() {
+                 continue;
+             }
+ 
+-            if (mPolls[1].revents == mPolls[1].events && readFpState(mPollFd, mScreenX, mScreenY)) {
++            if ((mPolls[1].revents & POLLIN) && readFodDown(mPollFd)) {
++                // The middle of the sensor (config_udfps_sensor_props), where auth starts.
++                mScreenX = kUdfpsX;
++                mScreenY = kUdfpsY;
+                 mIsEnabled = false;
+                 mCallback->postEvents(readEvents(), isWakeUpSensor());
+             } else if (mPolls[0].revents == mPolls[0].events) {
+diff --git a/sepolicy/vendor/genfs_contexts b/sepolicy/vendor/genfs_contexts
+index 0fdcfe7..6627c21 100644
+--- a/sepolicy/vendor/genfs_contexts
++++ b/sepolicy/vendor/genfs_contexts
+@@ -43,5 +43,4 @@ genfscon proc /sys/walt u:object_r:proc_walt:s0
+ # for /devices/virtual/block.
+ genfscon sysfs /devices/platform/soc/1d84000.ufshc/host0/target0:0:0/0:0:0:0/block u:object_r:sysfs_devices_block:s0
+ genfscon sysfs /devices/platform/soc/ac0000.qcom,qupv3_1_geni_se/a90000.spi/spi_master/spi4/spi4.0/fts_gesture_mode u:object_r:sysfs_tap_to_wake:s0
+-genfscon sysfs /devices/platform/soc/ac0000.qcom,qupv3_1_geni_se/a90000.spi/spi_master/spi4/spi4.0/fts_gesture_fod_pressed u:object_r:vendor_sysfs_sensors:s0
+ genfscon sysfs /devices/platform/soc/ac0000.qcom,qupv3_1_geni_se/a90000.spi/spi_master/spi4/spi4.0/fts_gesture_single_tap_pressed u:object_r:vendor_sysfs_sensors:s0
+diff --git a/sepolicy/vendor/hal_sensors.te b/sepolicy/vendor/hal_sensors.te
+index 3763b96..dd393b9 100644
+--- a/sepolicy/vendor/hal_sensors.te
++++ b/sepolicy/vendor/hal_sensors.te
+@@ -1,2 +1,5 @@
+ allow hal_sensors_default audio_socket:sock_file rw_file_perms;
+ allow hal_sensors_default hal_audio_default:unix_stream_socket connectto;
++# sensors.nothing UDFPS sensor: the fingerprint-area key (249) from the fts_ts touch input device
++allow hal_sensors_default input_device:dir r_dir_perms;
++allow hal_sensors_default input_device:chr_file r_file_perms;
+-- 
+2.56.0
+

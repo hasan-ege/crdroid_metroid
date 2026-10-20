@@ -1,0 +1,28 @@
+From a403ec4b9612cb8e8d90709fa0a162345c4fa8fc Mon Sep 17 00:00:00 2001
+From: hasan <hasan@localhost>
+Date: Sun, 18 Oct 2026 06:31:37 +0300
+Subject: [PATCH 5/5] overlay: show the Smooth display switch
+
+crDroid ships config_show_smooth_display=false and the max refresh rate list
+disabled, so Settings had no way to choose 60 Hz except battery saver.
+---
+ overlay/packages/apps/Settings/res/values/config.xml | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/overlay/packages/apps/Settings/res/values/config.xml b/overlay/packages/apps/Settings/res/values/config.xml
+index 2eafd4f..7be7f16 100644
+--- a/overlay/packages/apps/Settings/res/values/config.xml
++++ b/overlay/packages/apps/Settings/res/values/config.xml
+@@ -2,4 +2,9 @@
+ <resources>
+     <!-- Decorative enrollment padding; keep separate from the physical 107 px sensor radius. -->
+     <integer name="config_udfpsEnrollProgressBar" translatable="false">99</integer>
++
++    <!-- Show Display > Smooth display (120 Hz on / 60 Hz off). crDroid hides it by default and
++         its max refresh rate list is off too, which left no way to pick 60 Hz outside of
++         battery saver. -->
++    <bool name="config_show_smooth_display">true</bool>
+ </resources>
+-- 
+2.56.0
+

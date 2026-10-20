@@ -1,0 +1,28 @@
+From 2340e8ad0ffd4c2efaef5b7192859f1f175522e1 Mon Sep 17 00:00:00 2001
+From: hasan <hasan@localhost>
+Date: Sun, 18 Oct 2026 10:23:17 +0300
+Subject: [PATCH] system.prop: linear brightness slider
+
+Brightness maps linearly to DBV (DisplayDeviceConfig) and the panel's nits are
+convex in DBV, so with the HLG slider curve everything below ~45 % sat at
+3-6 nits. Measured on device: slider 43 % -> 0.035 brightness (minimum).
+---
+ system.prop | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/system.prop b/system.prop
+index e05689c..f914851 100644
+--- a/system.prop
++++ b/system.prop
+@@ -58,3 +58,8 @@ persist.vendor.radio.atfwd.start=true
+ persist.vendor.overlay.izat.optin=rro
+ ro.charger.enable_suspend=1
+ ro.camera.notify_nfc=1
++
++# Brightness slider: linear instead of AOSP's HLG gamma. The display config maps brightness
++# linearly to panel DBV and this panel's light output is already strongly convex in DBV
++# (6 nits at 9 % DBV), so the HLG curve squeezed the lower half of the slider into 3-6 nits.
++sys.brightness.disable_gamma_conversion=true
+-- 
+2.56.0
+

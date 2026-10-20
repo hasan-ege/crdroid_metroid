@@ -1,0 +1,151 @@
+From b1ebf4bb318e9c18c53de871758bbd6fad24f07d Mon Sep 17 00:00:00 2001
+From: Your Name <your.email@example.com>
+Date: Fri, 14 Aug 2026 18:44:00 -0400
+Subject: [PATCH 4/7] SystemUI: hold max refresh for UDFPS overlay
+
+Change-Id: Icfcf4468316a05a1292933a6bcd95e54b88361b1
+(cherry picked from commit fe91e2e9052248e91483c90eb1c03c2959da77d0)
+---
+ .../SystemUI/res/values/lineage_config.xml    |  3 ++
+ .../systemui/biometrics/AuthController.java   |  1 +
+ .../systemui/biometrics/UdfpsController.java  |  6 +++
+ .../biometrics/UdfpsControllerOverlay.kt      | 41 +++++++++++++++++++
+ 4 files changed, 51 insertions(+)
+
+diff --git a/packages/SystemUI/res/values/lineage_config.xml b/packages/SystemUI/res/values/lineage_config.xml
+index 39a6955a0..0f98a42a1 100644
+--- a/packages/SystemUI/res/values/lineage_config.xml
++++ b/packages/SystemUI/res/values/lineage_config.xml
+@@ -21,6 +21,9 @@
+     <!-- Whether to enable framework dimming for UDFPS -->
+     <bool name="config_udfpsFrameworkDimming">false</bool>
+ 
++    <!-- Whether to hold maximum refresh rate for the full UDFPS overlay lifetime. -->
++    <bool name="config_udfpsOverlayMaxRefreshRate">false</bool>
++
+     <!-- Brightness-to-alpha lookup table (LUT) for UDFPS framework dimming.
+          Each entry is in the format <brightness>,<alpha> where:
+            - brightness = panel backlight level
+diff --git a/packages/SystemUI/src/com/android/systemui/biometrics/AuthController.java b/packages/SystemUI/src/com/android/systemui/biometrics/AuthController.java
+index 052e98506..c2cfa0d9c 100644
+--- a/packages/SystemUI/src/com/android/systemui/biometrics/AuthController.java
++++ b/packages/SystemUI/src/com/android/systemui/biometrics/AuthController.java
+@@ -307,6 +307,7 @@ public class AuthController implements
+         mUdfpsProps = !udfpsProps.isEmpty() ? udfpsProps : null;
+         if (mUdfpsProps != null) {
+             mUdfpsController = mUdfpsControllerFactory.get();
++            mUdfpsController.setAuthController(this);
+             mUdfpsController.addCallback(new UdfpsController.Callback() {
+                 @Override
+                 public void onFingerUp() {
+diff --git a/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsController.java b/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsController.java
+index b87e792c5..f44b6a55e 100644
+--- a/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsController.java
++++ b/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsController.java
+@@ -211,6 +211,11 @@ public class UdfpsController implements DozeReceiver, Dumpable {
+     // TODO(b/229290039): UDFPS controller should manage its dimensions on its own. Remove this.
+     @Nullable private Runnable mAuthControllerUpdateUdfpsLocation;
+     @Nullable private UdfpsDisplayModeProvider mUdfpsDisplayMode;
++    @Nullable private AuthController mAuthController;
++
++    public void setAuthController(@NonNull AuthController authController) {
++        mAuthController = authController;
++    }
+ 
+     // The ID of the pointer for which ACTION_DOWN has occurred. -1 means no pointer is active.
+     private int mActivePointerId = MotionEvent.INVALID_POINTER_ID;
+@@ -374,6 +379,7 @@ public class UdfpsController implements DozeReceiver, Dumpable {
+                         mKeyguardUpdateMonitor,
+                         mKeyguardStateController,
+                         mUdfpsDisplayMode,
++                        checkNotNull(mAuthController),
+                         requestId,
+                         reason,
+                         callback,
+diff --git a/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsControllerOverlay.kt b/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsControllerOverlay.kt
+index 07dcc2501..f43903bf8 100644
+--- a/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsControllerOverlay.kt
++++ b/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsControllerOverlay.kt
+@@ -87,6 +87,7 @@ constructor(
+     private val keyguardUpdateMonitor: KeyguardUpdateMonitor,
+     private val keyguardStateController: KeyguardStateController,
+     private var udfpsDisplayModeProvider: UdfpsDisplayModeProvider,
++    private val authController: AuthController,
+     val requestId: Long,
+     @RequestReason val requestReason: Int,
+     private val controllerCallback: IUdfpsOverlayControllerCallback,
+@@ -145,6 +146,9 @@ constructor(
+     private val useFrameworkDimming = context.resources.getBoolean(
+         com.android.systemui.res.R.bool.config_udfpsFrameworkDimming
+     )
++    private val requestMaxRefreshRateForOverlay =
++        context.resources.getBoolean(R.bool.config_udfpsOverlayMaxRefreshRate)
++    private var maxRefreshRateRequested = false
+ 
+     private val udfpsHelper: UdfpsHelper? = if (useFrameworkDimming) {
+         UdfpsHelper(context, windowManager, shadeInteractor, requestReason,
+@@ -356,6 +360,9 @@ constructor(
+     @SuppressLint("ClickableViewAccessibility")
+     fun show(params: UdfpsOverlayParams, attachListener: OnAttachStateChangeListener?): Boolean {
+         if (getTouchOverlay() == null) {
++            if (!requestMaxRefreshRate()) {
++                return false
++            }
+             overlayParams = params
+             overlayAttachStateListener = attachListener
+             sensorBounds = Rect(params.sensorBounds)
+@@ -436,6 +443,11 @@ constructor(
+                 }
+             } catch (e: RuntimeException) {
+                 Log.e(TAG, "showUdfpsOverlay | failed to add window", e)
++                overlayTouchView = null
++                addViewRunnable = null
++                listenForCurrentKeyguardState?.cancel()
++                releaseMaxRefreshRate()
++                return false
+             }
+             return true
+         }
+@@ -568,10 +580,39 @@ constructor(
+         overlayTouchView = null
+         overlayTouchListener = null
+         listenForCurrentKeyguardState?.cancel()
++        releaseMaxRefreshRate()
+ 
+         return wasShowing
+     }
+ 
++    private fun requestMaxRefreshRate(): Boolean {
++        if (!requestMaxRefreshRateForOverlay || maxRefreshRateRequested) {
++            return true
++        }
++
++        return try {
++            authController.requestMaxRefreshRate(true)
++            maxRefreshRateRequested = true
++            true
++        } catch (e: RemoteException) {
++            Log.e(TAG, "Failed to request max refresh rate", e)
++            false
++        }
++    }
++
++    private fun releaseMaxRefreshRate() {
++        if (!maxRefreshRateRequested) {
++            return
++        }
++
++        maxRefreshRateRequested = false
++        try {
++            authController.requestMaxRefreshRate(false)
++        } catch (e: RemoteException) {
++            Log.e(TAG, "Failed to release max refresh rate", e)
++        }
++    }
++
+     /** Cancel this request. */
+     fun cancel() {
+         try {
+-- 
+2.56.0
+

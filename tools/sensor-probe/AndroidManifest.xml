@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Temporary: logs the Nothing Phone (3) light/pocket sensors (tag SensorProbe). Not shipped. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.openglyph.sensorprobe">
+    <uses-sdk android:minSdkVersion="33" android:targetSdkVersion="36" />
+    <application android:label="Sensor Probe">
+        <activity android:name=".MainActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

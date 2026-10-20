@@ -1,0 +1,189 @@
+[
+ {
+  "repo": "android_build",
+  "branch": "lineage-23.2",
+  "path": "build/make",
+  "ahead": 1,
+  "behind": 0,
+  "commits": [
+   {
+    "sha": "b6f3e9828b846307184bb5c1689fd7f18932250d",
+    "title": "releasetools: tolerate duplicate target-files entries"
+   }
+  ]
+ },
+ {
+  "repo": "android_build_soong",
+  "branch": "lineage-23.2",
+  "path": "build/soong",
+  "ahead": 1,
+  "behind": 0,
+  "commits": [
+   {
+    "sha": "6ab1f8fd8cd97ce339ba8ac195f3278c1c9cea2e",
+    "title": "gen_build_prop: emit boot image security patch"
+   }
+  ]
+ },
+ {
+  "repo": "android_frameworks_av",
+  "branch": "lineage-23.2",
+  "path": "frameworks/av",
+  "ahead": 1,
+  "behind": 0,
+  "commits": [
+   {
+    "sha": "c7ad736d478d416605faaf694979947ac03b1054",
+    "title": "Codec2: Export plugin headers to media swcodec APEX"
+   }
+  ]
+ },
+ {
+  "repo": "android_frameworks_base",
+  "branch": "lineage-23.2",
+  "path": "frameworks/base",
+  "ahead": 5,
+  "behind": 5,
+  "commits": [
+   {
+    "sha": "6426e4f3cc828094bcd39c69f7d34462ec88e983",
+    "title": "frameworks: carry metroid bring-up compatibility fixes"
+   },
+   {
+    "sha": "fc5baed7ef5786ec95736443acd6b26f05c57bee",
+    "title": "SystemUI: suppress metroid fingerprint unlock ripple"
+   },
+   {
+    "sha": "6ed983f7a672450218dc1a878a60068ee6f2756b",
+    "title": "audio: bind AudioFX inert keepalive service"
+   },
+   {
+    "sha": "fe91e2e9052248e91483c90eb1c03c2959da77d0",
+    "title": "SystemUI: hold max refresh for UDFPS overlay"
+   },
+   {
+    "sha": "5e757fc38bf5c90afcd96c5bf5795b18f1398347",
+    "title": "UsbDeviceManager: recover AIDL gadget HAL death"
+   }
+  ]
+ },
+ {
+  "repo": "android_hardware_interfaces",
+  "branch": "lineage-23.2",
+  "path": "hardware/interfaces",
+  "ahead": 3,
+  "behind": 0,
+  "commits": [
+   {
+    "sha": "e17ea40f43e77393a6f4e3590732bdc661d32fb9",
+    "title": "audio: aidl: Add required build dependencies"
+   },
+   {
+    "sha": "6d860fa854cfc2dcdf049dc3a9227ee0e814982b",
+    "title": "wifi: aidl: Add legacy HAL build dependencies"
+   },
+   {
+    "sha": "c1d734da97be5bea4db11217367a8a9172c80dbc",
+    "title": "bluetooth: audio: Select stock VINTF declaration"
+   }
+  ]
+ },
+ {
+  "repo": "android_packages_apps_Settings",
+  "branch": "lineage-23.2",
+  "path": "packages/apps/Settings",
+  "ahead": 3,
+  "behind": 2,
+  "commits": [
+   {
+    "sha": "b60b0a4f2146caf547b0008d5ebbbf0d78745730",
+    "title": "Settings: avoid UDFPS enrollment footer overlap"
+   },
+   {
+    "sha": "aee21ef9b6b2572d8dcb9149986281cbe9bfafe6",
+    "title": "Settings: let metroid face HAL own camera preview"
+   },
+   {
+    "sha": "db83c956270ef1f9c09de5482aa244298ce3f5dc",
+    "title": "Settings: complete face guidance locale fallback"
+   }
+  ]
+ },
+ {
+  "repo": "android_packages_modules_Bluetooth",
+  "branch": "lineage-23.2",
+  "path": "packages/modules/Bluetooth",
+  "ahead": 1,
+  "behind": 3,
+  "commits": [
+   {
+    "sha": "5d04bb628ea8b2a790fc2c219f32b033d39dbdca",
+    "title": "audio_bluetooth_hw: Add session include dependencies"
+   }
+  ]
+ },
+ {
+  "repo": "android_packages_modules_Connectivity",
+  "branch": "lineage-23.2",
+  "path": "packages/modules/Connectivity",
+  "ahead": 3,
+  "behind": 0,
+  "commits": [
+   {
+    "sha": "41382b71ad590be7b2468a363f57ecb3c4c1e720",
+    "title": "Tethering: retry late NCM interface serving"
+   },
+   {
+    "sha": "668777e3b9507e3aaa7d25a47ec7faef71ab98d4",
+    "title": "Tethering: prefer active NCM classification"
+   },
+   {
+    "sha": "6c768f786363b7964ee3df076deb4488ea2d9383",
+    "title": "Tethering: resolve the late NCM serving type inline"
+   }
+  ]
+ },
+ {
+  "repo": "android_system_sepolicy",
+  "branch": "lineage-23.2",
+  "path": "system/sepolicy",
+  "ahead": 1,
+  "behind": 0,
+  "commits": [
+   {
+    "sha": "ffb51a073758d463faf083ddb4e20ea3be71140d",
+    "title": "mediaserver: allow optional media quality lookup"
+   }
+  ]
+ },
+ {
+  "repo": "android_vendor_lineage",
+  "branch": "lineage-23.2",
+  "path": "vendor/lineage",
+  "ahead": 1,
+  "behind": 3,
+  "commits": [
+   {
+    "sha": "18f0d6bc7910f0b4a0e1a96b865434118aa7e1e9",
+    "title": "kernel headers: support metroid prebuilt exports"
+   }
+  ]
+ },
+ {
+  "repo": "android_bootable_recovery",
+  "branch": "lineage-23.2-metroid",
+  "path": "bootable/recovery",
+  "ahead": 2,
+  "behind": 0,
+  "commits": [
+   {
+    "sha": "92d337372d6dff1f36e9c1525563a41f06ac3a40",
+    "title": "recovery: support devices with more input nodes"
+   },
+   {
+    "sha": "8dd3fdd0966c0d1b3761c61f15a3c84a55b6c73e",
+    "title": "recovery: report sideload install results to new hosts"
+   }
+  ]
+ }
+]

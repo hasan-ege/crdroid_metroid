@@ -1,0 +1,33 @@
+From 85625f96c31973cd39cc320108340c50f0b66630 Mon Sep 17 00:00:00 2001
+From: hasan <hasan@localhost>
+Date: Sun, 18 Oct 2026 10:58:27 +0300
+Subject: [PATCH] metroid: report the stock model A024
+
+Nothing's Glyph Matrix SDK decides it runs on a Phone (3) with
+Build.MODEL.contains("A024"); with "Phone (3)" it returned a 0-sized matrix
+and SDK apps (com.tober.glyphmatrixtools) could not draw. Keep "Phone (3)" as
+ro.product.marketname.
+---
+ lineage_metroid.mk | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/lineage_metroid.mk b/lineage_metroid.mk
+index 1f5fd64..8c97c68 100644
+--- a/lineage_metroid.mk
++++ b/lineage_metroid.mk
+@@ -20,7 +20,11 @@ PRODUCT_NAME := lineage_metroid
+ PRODUCT_DEVICE := metroid
+ PRODUCT_MANUFACTURER := Nothing
+ PRODUCT_BRAND := Nothing
+-PRODUCT_MODEL := Phone (3)
++# Stock reports Build.MODEL "A024"; apps check it (the Glyph Matrix SDK identifies the
++# Phone (3) by Build.MODEL containing "A024" and otherwise reports a 0-sized matrix).
++PRODUCT_MODEL := A024
++PRODUCT_SYSTEM_PROPERTIES += \
++    ro.product.marketname=Phone (3)
+ 
+ PRODUCT_GMS_CLIENTID_BASE := android-nothing
+ PRODUCT_SHIPPING_API_LEVEL := 35
+-- 
+2.56.0
+

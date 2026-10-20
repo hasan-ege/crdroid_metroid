@@ -1,0 +1,45 @@
+From aff26b935040e7ee230d51df9ad321f1b60c7bc4 Mon Sep 17 00:00:00 2001
+From: hasan <hasan@localhost>
+Date: Sat, 17 Oct 2026 22:37:39 +0300
+Subject: [PATCH] SystemUI: use crDroid's injected AuthController in
+ UdfpsController
+
+crDroid already injects a final mAuthController into UdfpsController, so the
+nullable copy and setAuthController() added by 'hold max refresh for UDFPS
+overlay' redeclared the field. Drop them; the overlay gets crDroid's instance.
+---
+ .../src/com/android/systemui/biometrics/AuthController.java  | 1 -
+ .../src/com/android/systemui/biometrics/UdfpsController.java | 5 -----
+ 2 files changed, 6 deletions(-)
+
+diff --git a/packages/SystemUI/src/com/android/systemui/biometrics/AuthController.java b/packages/SystemUI/src/com/android/systemui/biometrics/AuthController.java
+index 04c578ca5..201c80537 100644
+--- a/packages/SystemUI/src/com/android/systemui/biometrics/AuthController.java
++++ b/packages/SystemUI/src/com/android/systemui/biometrics/AuthController.java
+@@ -306,7 +306,6 @@ public class AuthController implements
+         mUdfpsProps = !udfpsProps.isEmpty() ? udfpsProps : null;
+         if (mUdfpsProps != null) {
+             mUdfpsController = mUdfpsControllerFactory.get();
+-            mUdfpsController.setAuthController(this);
+             mUdfpsController.addCallback(new UdfpsController.Callback() {
+                 @Override
+                 public void onFingerUp() {
+diff --git a/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsController.java b/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsController.java
+index c1df978af..a41bee634 100644
+--- a/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsController.java
++++ b/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsController.java
+@@ -212,11 +212,6 @@ public class UdfpsController implements DozeReceiver, Dumpable {
+     // TODO(b/229290039): UDFPS controller should manage its dimensions on its own. Remove this.
+     @Nullable private Runnable mAuthControllerUpdateUdfpsLocation;
+     @Nullable private UdfpsDisplayModeProvider mUdfpsDisplayMode;
+-    @Nullable private AuthController mAuthController;
+-
+-    public void setAuthController(@NonNull AuthController authController) {
+-        mAuthController = authController;
+-    }
+ 
+     // The ID of the pointer for which ACTION_DOWN has occurred. -1 means no pointer is active.
+     private int mActivePointerId = MotionEvent.INVALID_POINTER_ID;
+-- 
+2.56.0
+

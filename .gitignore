@@ -1,0 +1,8 @@
+__pycache__/
+*.apk
+*.idsig
+*.keystore
+*.pk8
+*.pem
+*.zip
+*.img

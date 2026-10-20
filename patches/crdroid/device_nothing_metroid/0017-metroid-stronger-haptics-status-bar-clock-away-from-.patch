@@ -1,0 +1,75 @@
+From fd28f6ef1eafe2e7e1bc6dd86a24a5c87f430606 Mon Sep 17 00:00:00 2001
+From: hasan <gungorbzk@gmail.com>
+Date: Sun, 18 Oct 2026 15:47:46 +0300
+Subject: [PATCH 17/17] metroid: stronger haptics, status bar clock away from
+ the corner
+
+- Haptics: the driver kicks each pulse at full drive (cont_drv1_lvl 0x7f) and
+  then holds the rated level (0x48). Stretch the kick (cont_drv1_time 4 -> 0xe)
+  so taps and clicks play entirely at full drive (~1.8x); long vibrations
+  still settle at the rated level. Glyph Button pulses back to 30/40 ms.
+- rounded_corner_content_padding 60px: the clock sat ~17px from the left
+  edge under the rounded corner, while the battery is ~70px from the right.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../src/org/lineageos/settings/device/KeyHandler.java    | 9 +++++----
+ overlay/frameworks/base/core/res/res/values/dimens.xml   | 3 +++
+ rootdir/etc/init.metroid.rc                              | 7 +++++++
+ 3 files changed, 15 insertions(+), 4 deletions(-)
+
+diff --git a/keyhandler/src/org/lineageos/settings/device/KeyHandler.java b/keyhandler/src/org/lineageos/settings/device/KeyHandler.java
+index 57d2fb2..cfd5852 100644
+--- a/keyhandler/src/org/lineageos/settings/device/KeyHandler.java
++++ b/keyhandler/src/org/lineageos/settings/device/KeyHandler.java
+@@ -37,10 +37,11 @@ public class KeyHandler implements DeviceKeyHandler {
+     private static final String OPENGLYPH_PACKAGE = "org.openglyph";
+     private static final String EXTRA_EVENT = "event";
+     private static final long LONG_PRESS_MS = 600;
+-    // The AW86938 HAL here has no amplitude control and no prebaked effects, so CLICK and
+-    // HEAVY_CLICK fall back to ~30 / ~40 ms pulses; strength comes from length. Twice those.
+-    private static final long PRESS_HAPTIC_MS = 60;
+-    private static final long LONG_PRESS_HAPTIC_MS = 80;
++    // The vibrator HAL has no amplitude control or prebaked effects, so these are plain pulses
++    // (the length CLICK / HEAVY_CLICK fall back to). Their strength comes from the driver's
++    // full-level kick, which init.metroid.rc stretches over short pulses.
++    private static final long PRESS_HAPTIC_MS = 30;
++    private static final long LONG_PRESS_HAPTIC_MS = 40;
+ 
+     // Hardware feedback, like the power button: unlike USAGE_TOUCH it is not dropped in
+     // battery saver, and its strength follows the touch feedback intensity setting.
+diff --git a/overlay/frameworks/base/core/res/res/values/dimens.xml b/overlay/frameworks/base/core/res/res/values/dimens.xml
+index c8d76e8..71a9568 100644
+--- a/overlay/frameworks/base/core/res/res/values/dimens.xml
++++ b/overlay/frameworks/base/core/res/res/values/dimens.xml
+@@ -7,4 +7,7 @@
+     <dimen name="status_bar_height_portrait">162px</dimen>
+     <dimen name="status_bar_height_landscape">36dp</dimen>
+     <dimen name="rounded_corner_radius">115px</dimen>
++    <!-- Keep status bar content (the clock on the left) clear of the 115px corner, about as far
++         from the edge as the battery is on the right (where the privacy dot adds room). -->
++    <dimen name="rounded_corner_content_padding">60px</dimen>
+ </resources>
+diff --git a/rootdir/etc/init.metroid.rc b/rootdir/etc/init.metroid.rc
+index c107888..cc997fe 100644
+--- a/rootdir/etc/init.metroid.rc
++++ b/rootdir/etc/init.metroid.rc
+@@ -14,8 +14,15 @@ on boot
+ # every vibration is dropped ("activate_store: val : 1 ignore"). Turn it back on after the HAL
+ # has written it: the HAL does so when vendor.haptic.calibrate.done is set, then sets
+ # persist.vendor.sfdc, so the second trigger runs after its write.
++#
++# Strength: a pulse starts with a kick at full drive (cont_drv1_lvl 0x7f) and then holds the
++# rated level (cont_drv2_lvl 0x48, ~57%). Stretching the kick (cont_drv1_time 0x04 -> 0x0e)
++# plays short taps and clicks entirely at full drive (~1.8x); long vibrations still settle
++# at the rated level, so the motor is not overdriven for long.
+ on property:vendor.haptic.calibrate.done=1
+     write /sys/class/leds/vibrator_nt/haptic_interface_disable 0
++    write /sys/class/leds/vibrator_nt/cont_drv_time "e 32"
+ 
+ on property:persist.vendor.sfdc=*
+     write /sys/class/leds/vibrator_nt/haptic_interface_disable 0
++    write /sys/class/leds/vibrator_nt/cont_drv_time "e 32"
+-- 
+2.56.0
+

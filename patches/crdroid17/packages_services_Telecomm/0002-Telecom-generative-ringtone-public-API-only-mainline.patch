@@ -1,0 +1,31 @@
+From 05d687af71468cb14ba3c72782a6d4adfab8e8b7 Mon Sep 17 00:00:00 2001
+From: hasan <gungorbzk@gmail.com>
+Date: Mon, 19 Oct 2026 10:54:44 +0300
+Subject: [PATCH 2/2] Telecom: generative ringtone: public API only (mainline
+ module on Android 17)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/com/android/server/telecom/RingtoneFactory.java | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/src/com/android/server/telecom/RingtoneFactory.java b/src/com/android/server/telecom/RingtoneFactory.java
+index 282253f..a602f92 100644
+--- a/src/com/android/server/telecom/RingtoneFactory.java
++++ b/src/com/android/server/telecom/RingtoneFactory.java
+@@ -169,8 +169,10 @@ public class RingtoneFactory {
+      * Telecom, and the same caller always maps to the same sound, whatever the number's format.
+      */
+     private Uri generativeRingtoneUri(Call call, Context userContext) {
+-        if (Settings.Secure.getIntForUser(userContext.getContentResolver(),
+-                GENERATIVE_RINGTONE_SETTING, 0, userContext.getUserId()) == 0) {
++        // userContext belongs to the receiving user, so its resolver reads that user's setting
++        // (Telecom is a mainline module on Android 17: only public APIs).
++        if (Settings.Secure.getInt(userContext.getContentResolver(),
++                GENERATIVE_RINGTONE_SETTING, 0) == 0) {
+             return null;
+         }
+         Uri handle = call.getHandle();
+-- 
+2.56.0
+

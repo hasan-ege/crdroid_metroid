@@ -1,0 +1,204 @@
+From 7e2e6bb39ecf9446bac0eb25ec50c7873474b2e4 Mon Sep 17 00:00:00 2001
+From: hasan <gungorbzk@gmail.com>
+Date: Wed, 21 Oct 2026 19:32:22 +0300
+Subject: [PATCH] usb: ask "Use USB for" when plugged into a computer
+
+The USB notification lives on a minimum-importance channel, so plugging the
+phone into a computer showed nothing you would notice, and in charging-only
+mode often nothing at all. Ask once per connection with a heads-up
+notification on a new high-importance channel: File transfer (switches to
+MTP) or Charging only (dismisses). Tapping it opens the USB settings.
+
+Only when the link gets configured, which a wall charger never does, and only
+while USB is charging only; it goes away when the cable is pulled or a mode is
+picked some other way.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../SystemNotificationChannels.java           |  9 ++
+ core/res/res/values-tr/strings.xml            |  5 ++
+ core/res/res/values/strings.xml               |  7 ++
+ core/res/res/values/symbols.xml               |  5 ++
+ .../android/server/usb/UsbDeviceManager.java  | 82 +++++++++++++++++++
+ 5 files changed, 108 insertions(+)
+
+diff --git a/core/java/com/android/internal/notification/SystemNotificationChannels.java b/core/java/com/android/internal/notification/SystemNotificationChannels.java
+index 415aaa024..768f53363 100644
+--- a/core/java/com/android/internal/notification/SystemNotificationChannels.java
++++ b/core/java/com/android/internal/notification/SystemNotificationChannels.java
+@@ -60,6 +60,8 @@ public class SystemNotificationChannels {
+     public static final String ALERTS = "ALERTS";
+     public static final String RETAIL_MODE = "RETAIL_MODE";
+     public static final String USB = "USB";
++    /** "Use USB for": asked when the phone is plugged into a computer (heads-up). */
++    public static final String USB_PROMPT = "USB_PROMPT";
+     public static final String FOREGROUND_SERVICE = "FOREGROUND_SERVICE";
+     public static final String HEAVY_WEIGHT_APP = "HEAVY_WEIGHT_APP";
+     /**
+@@ -179,6 +181,13 @@ public class SystemNotificationChannels {
+                 NotificationManager.IMPORTANCE_MIN);
+         channelsList.add(usb);
+ 
++        final NotificationChannel usbPrompt = new NotificationChannel(
++                USB_PROMPT,
++                context.getString(R.string.notification_channel_usb_prompt),
++                NotificationManager.IMPORTANCE_HIGH);
++        usbPrompt.setSound(null, null);
++        channelsList.add(usbPrompt);
++
+         NotificationChannel foregroundChannel = new NotificationChannel(
+                 FOREGROUND_SERVICE,
+                 context.getString(R.string.notification_channel_foreground_service),
+diff --git a/core/res/res/values-tr/strings.xml b/core/res/res/values-tr/strings.xml
+index 83d41a370..7eb210b4f 100644
+--- a/core/res/res/values-tr/strings.xml
++++ b/core/res/res/values-tr/strings.xml
+@@ -325,6 +325,11 @@
+     <string name="notification_channel_alerts" msgid="5070241039583668427">"Uyarılar"</string>
+     <string name="notification_channel_retail_mode" msgid="3732239154256431213">"Mağaza demo"</string>
+     <string name="notification_channel_usb" msgid="1528280969406244896">"USB bağlantısı"</string>
++    <string name="notification_channel_usb_prompt">"USB bağlantı seçimi"</string>
++    <string name="usb_prompt_title">"USB ne için kullanılsın?"</string>
++    <string name="usb_prompt_message">"Bilgisayara bağlandı. Seçene kadar yalnızca şarj."</string>
++    <string name="usb_prompt_file_transfer">"Dosya aktarımı"</string>
++    <string name="usb_prompt_charge_only">"Yalnızca şarj"</string>
+     <string name="notification_channel_heavy_weight_app" msgid="17455756500828043">"Uygulama çalışıyor"</string>
+     <string name="notification_channel_foreground_service" msgid="7102189948158885178">"Pil kullanan uygulamalar"</string>
+     <string name="notification_channel_accessibility_magnification" msgid="1707913872219798098">"Büyütme"</string>
+diff --git a/core/res/res/values/strings.xml b/core/res/res/values/strings.xml
+index 9f15c6444..3c0d549a0 100644
+--- a/core/res/res/values/strings.xml
++++ b/core/res/res/values/strings.xml
+@@ -945,6 +945,13 @@
+ 
+     <!-- Text shown when viewing channel settings for notifications related to a usb connection -->
+     <string name="notification_channel_usb">USB connection</string>
++    <!-- Notification channel for the question asked when the phone is plugged into a computer. -->
++    <string name="notification_channel_usb_prompt">USB connection choice</string>
++    <!-- Heads-up notification when plugged into a computer: what USB should be used for. -->
++    <string name="usb_prompt_title">Use USB for</string>
++    <string name="usb_prompt_message">Connected to a computer. Charging only until you choose.</string>
++    <string name="usb_prompt_file_transfer">File transfer</string>
++    <string name="usb_prompt_charge_only">Charging only</string>
+ 
+     <!-- Text shown when viewing channel settings for notification about a heavy-weight app
+          currently running.
+diff --git a/core/res/res/values/symbols.xml b/core/res/res/values/symbols.xml
+index 9be70a39e..fd6bd37da 100644
+--- a/core/res/res/values/symbols.xml
++++ b/core/res/res/values/symbols.xml
+@@ -4262,6 +4262,11 @@
+   <java-symbol type="string" name="notification_channel_alerts" />
+   <java-symbol type="string" name="notification_channel_retail_mode" />
+   <java-symbol type="string" name="notification_channel_usb" />
++  <java-symbol type="string" name="notification_channel_usb_prompt" />
++  <java-symbol type="string" name="usb_prompt_title" />
++  <java-symbol type="string" name="usb_prompt_message" />
++  <java-symbol type="string" name="usb_prompt_file_transfer" />
++  <java-symbol type="string" name="usb_prompt_charge_only" />
+   <java-symbol type="string" name="notification_channel_heavy_weight_app" />
+   <java-symbol type="string" name="notification_channel_system_changes" />
+   <java-symbol type="string" name="notification_channel_accessibility_magnification" />
+diff --git a/services/usb/java/com/android/server/usb/UsbDeviceManager.java b/services/usb/java/com/android/server/usb/UsbDeviceManager.java
+index 88387b379..9f9ae4872 100644
+--- a/services/usb/java/com/android/server/usb/UsbDeviceManager.java
++++ b/services/usb/java/com/android/server/usb/UsbDeviceManager.java
+@@ -1432,6 +1432,7 @@ public class UsbDeviceManager implements ActivityTaskManagerInternal.ScreenObser
+ 
+                     updateUsbNotification(false);
+                     updateAdbNotification(false);
++                    updateUsbPrompt();
+                     if (mBootCompleted) {
+                         updateUsbStateBroadcastIfNeeded(getAppliedFunctions(mCurrentFunctions));
+                     }
+@@ -1950,6 +1951,87 @@ public class UsbDeviceManager implements ActivityTaskManagerInternal.ScreenObser
+                     .isAdbEnabled(AdbTransportType.USB);
+         }
+ 
++        // ---- "Use USB for" (metroid): asked once per connection to a computer ----
++
++        private static final String ACTION_USB_PROMPT = "com.android.server.usb.action.USB_PROMPT";
++        private static final String EXTRA_USB_PROMPT_CHOICE = "choice";
++        private static final String USB_PROMPT_TAG = "usb_prompt";
++        private boolean mUsbPromptShown;
++        private boolean mUsbPromptReceiverRegistered;
++
++        private final BroadcastReceiver mUsbPromptReceiver = new BroadcastReceiver() {
++            @Override
++            public void onReceive(Context context, Intent intent) {
++                if ("mtp".equals(intent.getStringExtra(EXTRA_USB_PROMPT_CHOICE))) {
++                    mUsbDeviceManager.setCurrentFunctions(UsbManager.FUNCTION_MTP,
++                            sUsbOperationCount.incrementAndGet());
++                }
++                cancelUsbPrompt();
++            }
++        };
++
++        private void cancelUsbPrompt() {
++            if (mNotificationManager != null) {
++                mNotificationManager.cancelAsUser(USB_PROMPT_TAG, 1, UserHandle.ALL);
++            }
++        }
++
++        /**
++         * Plugged into a computer (the link is configured, which a wall charger never does) while
++         * USB is only charging: ask what it is for, once per connection.
++         */
++        protected void updateUsbPrompt() {
++            if (!mConnected) {
++                if (mUsbPromptShown) cancelUsbPrompt();
++                mUsbPromptShown = false;
++                return;
++            }
++            if (mUsbPromptShown && mCurrentFunctions != UsbManager.FUNCTION_NONE) {
++                cancelUsbPrompt(); // a mode was picked some other way
++                return;
++            }
++            if (mUsbPromptShown || !mConfigured || !mBootCompleted || mNotificationManager == null
++                    || mCurrentFunctions != UsbManager.FUNCTION_NONE || mHostConnected
++                    || mSourcePower) {
++                return;
++            }
++            if (!mUsbPromptReceiverRegistered) {
++                mContext.registerReceiver(mUsbPromptReceiver, new IntentFilter(ACTION_USB_PROMPT),
++                        null, this, Context.RECEIVER_NOT_EXPORTED);
++                mUsbPromptReceiverRegistered = true;
++            }
++            Resources r = mContext.getResources();
++            Intent details = Intent.makeRestartActivityTask(new ComponentName("com.android.settings",
++                    "com.android.settings.Settings$UsbDetailsActivity"));
++            PendingIntent open = PendingIntent.getActivityAsUser(mContext, 0, details,
++                    PendingIntent.FLAG_IMMUTABLE, null, UserHandle.CURRENT);
++            PendingIntent mtp = PendingIntent.getBroadcast(mContext, 1,
++                    new Intent(ACTION_USB_PROMPT).setPackage("android")
++                            .putExtra(EXTRA_USB_PROMPT_CHOICE, "mtp"),
++                    PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
++            PendingIntent charge = PendingIntent.getBroadcast(mContext, 2,
++                    new Intent(ACTION_USB_PROMPT).setPackage("android")
++                            .putExtra(EXTRA_USB_PROMPT_CHOICE, "charge"),
++                    PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
++            Notification n = new Notification.Builder(mContext, SystemNotificationChannels.USB_PROMPT)
++                    .setSmallIcon(com.android.internal.R.drawable.stat_sys_data_usb)
++                    .setColor(mContext.getColor(
++                            com.android.internal.R.color.system_notification_accent_color))
++                    .setContentTitle(r.getText(com.android.internal.R.string.usb_prompt_title))
++                    .setContentText(r.getText(com.android.internal.R.string.usb_prompt_message))
++                    .setContentIntent(open)
++                    .setAutoCancel(true)
++                    .setCategory(Notification.CATEGORY_SYSTEM)
++                    .setVisibility(Notification.VISIBILITY_PUBLIC)
++                    .addAction(new Notification.Action.Builder(null, r.getText(
++                            com.android.internal.R.string.usb_prompt_file_transfer), mtp).build())
++                    .addAction(new Notification.Action.Builder(null, r.getText(
++                            com.android.internal.R.string.usb_prompt_charge_only), charge).build())
++                    .build();
++            mNotificationManager.notifyAsUser(USB_PROMPT_TAG, 1, n, UserHandle.ALL);
++            mUsbPromptShown = true;
++        }
++
+         protected void updateAdbNotification(boolean force) {
+             if (mNotificationManager == null) return;
+             final int id = SystemMessage.NOTE_ADB_ACTIVE;
+-- 
+2.56.0
+

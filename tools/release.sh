@@ -1,13 +1,19 @@
 #!/usr/bin/env bash
 # Builds a ROM, keeps the zip under builds/, copies it to the phone and checks it.
-# Run it yourself in a terminal (not from Claude): long builds can make the kernel's OOM killer
-# pick the Claude process.
+# Run it yourself in a terminal (not from Claude): under memory pressure systemd-oomd kills
+# whole terminal tabs, and with them the Claude process.
 #
 #   bash tools/release.sh                 # Android 17 (crDroid 17), release build (secure adb)
 #   bash tools/release.sh 16              # Android 16 tree
 #   bash tools/release.sh 17 --upload     # also upload to Internet Archive (ia configure first)
 #   DEBUG=1 bash tools/release.sh         # bring-up build: adb without authorization
-#   JOBS=4 bash tools/release.sh          # fewer parallel jobs if memory runs out
+#   JOBS=3 JAVA_HEAP=2g bash tools/release.sh   # even less memory
+#
+# Memory: CachyOS runs systemd-oomd, which kills the whole terminal tab when memory pressure gets
+# high (that is what stopped earlier builds). Defaults here are 4 jobs and 3 GB per Java tool;
+# for a safe run stop oomd for the build (the kernel's own OOM killer stays on):
+#   sudo systemctl stop systemd-oomd    # before
+#   sudo systemctl start systemd-oomd   # after
 #
 # The build log is ~/android/logs/current_build.log (tail -f it to follow).
 set -o pipefail
@@ -32,11 +38,18 @@ else
 fi
 export TOP
 export DEBUG=${DEBUG:-0}
-export JOBS=${JOBS:-6}
+export JOBS=${JOBS:-4}
+export JAVA_HEAP=${JAVA_HEAP:-3g}
 
 say() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 
-say "Building crDroid ($TAG) in $TOP — DEBUG=$DEBUG JOBS=$JOBS"
+if systemctl is-active --quiet systemd-oomd 2>/dev/null; then
+    echo "Warning: systemd-oomd is running and may kill this terminal mid-build."
+    echo "  To prevent it:  sudo systemctl stop systemd-oomd   (start it again afterwards)"
+    echo "  Continuing in 10 s with lower memory use (Ctrl+C to stop)..."
+    sleep 10
+fi
+say "Building crDroid ($TAG) in $TOP — DEBUG=$DEBUG JOBS=$JOBS JAVA_HEAP=$JAVA_HEAP"
 START=$(date +%s)
 # Lower priority so the desktop stays usable; the build itself is unchanged.
 nice -n 10 ionice -c 3 bash "$HERE/tools/build.sh" bacon || {

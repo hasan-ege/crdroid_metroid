@@ -39,7 +39,7 @@ if grep -q "NINJA_DEFAULT ninjaCommandType = NINJA_SISO" build/soong/ui/build/co
 else
     export NINJA_ARGS="-j$JOBS -k ${KEEP_GOING:-0}"
 fi
-export _JAVA_OPTIONS="-Xmx6g"
+export _JAVA_OPTIONS="-Xmx${JAVA_HEAP:-6g}"
 
 {
     echo "BUILD START $(date) target=$TARGET variant=$VARIANT jobs=$JOBS gms=${WITH_GMS:-false} adb_insecure=${WITH_ADB_INSECURE:-false}"

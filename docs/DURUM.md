@@ -441,3 +441,11 @@ swap gerekir), /home'da 627 GB boş.
 - **A17-10 (22:09, güvenli/DEBUG=0):** `builds/crDroid-13.0-20261020-A17-10/` (sha256 00206ae9…). Telefona gönderildi, doğrulandı.
   Internet Archive: https://archive.org/details/crdroid-metroid-17.0-20261020
 - Özellik listesi: `OZELLIKLER.md` (her gün 1–2 tane).
+- **21 Eki:** Her şey oyuncak + otomasyonlar (OpenGlyph aeedc7e), USB "ne için kullanılsın" bildirimi (frameworks 0008).
+- **Aramada ekran geri açılmıyordu:** ekran altı yakınlık sensörü (GLS6851C) panel kapalıyken ölçmüyor (test: ekran
+  kapalıyken 3 kez kapat/aç, sıfır olay). Stok sistem, yakınlık kilidi alınınca Nothing'in sensor_extension HAL'ine
+  `execSyncIntInt(4,7,0,[1/2])` gönderiyor; bizde HAL'in SELinux alanı yoktu, hiç başlamıyordu. Düzeltme: device
+  sepolicy (hal_sensor_extension.te, 0003) + framework NtProximityNotifier (0009). Cihazda doğrulanmadı.
+- **Derleme betiği:** `tools/release.sh` (kullanıcı kendi terminalinde çalıştırır; OOM Claude'u kapatıyordu).
+- Dual SIM: SIM1 + SIM2 fiziksel çalışıyor (dsds). eSIM: 2. yuva ya fiziksel SIM2 ya eSIM; Google SIM Yöneticisi
+  kurulu, bizim derlemelerde denenmedi.

@@ -1,0 +1,128 @@
+From 854f367ddad6f25d8f65862cab742b6d307632bf Mon Sep 17 00:00:00 2001
+From: hasan <gungorbzk@gmail.com>
+Date: Wed, 21 Oct 2026 21:00:52 +0300
+Subject: [PATCH] display: tell the metroid sensor hub about the in-call
+ proximity lock
+
+On the Nothing Phone (3) the proximity sensor sits under the panel and stops
+measuring once the panel is off, unless the sensor hub is told a call holds
+the proximity screen-off wake lock. Without that the screen turned off at the
+ear and never came back on: no "far" event ever arrived.
+
+Send what the stock system sends through Nothing's sensor extension HAL
+(execSyncIntInt(4, 7, 0, [1 held / 2 released])) when the proximity sensor is
+enabled and disabled for the wake lock. A no-op where the HAL is not declared.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../DisplayPowerProximityStateController.java |  2 +
+ .../server/display/NtProximityNotifier.java   | 77 +++++++++++++++++++
+ 2 files changed, 79 insertions(+)
+ create mode 100644 services/core/java/com/android/server/display/NtProximityNotifier.java
+
+diff --git a/services/core/java/com/android/server/display/DisplayPowerProximityStateController.java b/services/core/java/com/android/server/display/DisplayPowerProximityStateController.java
+index 35455c841..a063d10b6 100644
+--- a/services/core/java/com/android/server/display/DisplayPowerProximityStateController.java
++++ b/services/core/java/com/android/server/display/DisplayPowerProximityStateController.java
+@@ -395,6 +395,7 @@ public final class DisplayPowerProximityStateController {
+                 mIgnoreProximityUntilChanged = false;
+                 mSensorManager.registerListener(mProximitySensorListener, mProximitySensor,
+                         SensorManager.SENSOR_DELAY_NORMAL, mHandler);
++                NtProximityNotifier.notify(true);
+             }
+         } else {
+             if (mProximitySensorEnabled) {
+@@ -406,6 +407,7 @@ public final class DisplayPowerProximityStateController {
+                 mPendingProximity = PROXIMITY_UNKNOWN;
+                 mHandler.removeMessages(MSG_PROXIMITY_SENSOR_DEBOUNCED);
+                 mSensorManager.unregisterListener(mProximitySensorListener);
++                NtProximityNotifier.notify(false);
+                 // release wake lock(must be last)
+                 boolean proxDebounceSuspendBlockerReleased =
+                         mWakelockController.releaseWakelock(
+diff --git a/services/core/java/com/android/server/display/NtProximityNotifier.java b/services/core/java/com/android/server/display/NtProximityNotifier.java
+new file mode 100644
+index 000000000..07ab447fe
+--- /dev/null
++++ b/services/core/java/com/android/server/display/NtProximityNotifier.java
+@@ -0,0 +1,77 @@
++/*
++ * Copyright (C) 2026 The crDroid metroid port
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++package com.android.server.display;
++
++import android.os.IBinder;
++import android.os.Parcel;
++import android.os.RemoteException;
++import android.os.ServiceManager;
++import android.util.Slog;
++
++import com.android.internal.os.BackgroundThread;
++
++/**
++ * Nothing Phone (3): tells the sensor hub, through Nothing's sensor extension HAL, when a call
++ * holds the proximity screen-off wake lock. The under-display proximity sensor only keeps
++ * measuring with the panel off while it knows this; otherwise the screen turns off at the ear and
++ * never comes back on when the phone is taken away.
++ *
++ * Interface (from the stock system's use of the HAL): execSyncIntInt(4, 7, 0, data[15]) with
++ * data[0] = 1 when the wake lock is taken, 2 when it is released. Does nothing on devices
++ * without the HAL.
++ */
++final class NtProximityNotifier {
++    private static final String TAG = "NtProximityNotifier";
++    private static final String SERVICE =
++            "vendor.noth.hardware.sensor.sensor_extension.ISensorExtension/default";
++    private static final String DESCRIPTOR =
++            "vendor.noth.hardware.sensor.sensor_extension.ISensorExtension";
++    private static final int TRANSACTION_EXEC_SYNC_INT_INT = IBinder.FIRST_CALL_TRANSACTION;
++    private static final int GROUP_PROXIMITY = 4, CMD_SCREEN_OFF_WAKELOCK = 7;
++    private static final int ACQUIRED = 1, RELEASED = 2;
++
++    private static volatile Boolean sPresent;
++
++    private NtProximityNotifier() {}
++
++    static void notify(boolean wakeLockHeld) {
++        if (Boolean.FALSE.equals(sPresent)) return;
++        BackgroundThread.getHandler().post(() -> send(wakeLockHeld ? ACQUIRED : RELEASED));
++    }
++
++    private static void send(int state) {
++        IBinder b;
++        try {
++            b = ServiceManager.isDeclared(SERVICE) ? ServiceManager.waitForService(SERVICE) : null;
++        } catch (RuntimeException e) {
++            b = null;
++        }
++        if (b == null) {
++            sPresent = false;
++            return;
++        }
++        sPresent = true;
++        Parcel data = Parcel.obtain(b);
++        Parcel reply = Parcel.obtain();
++        try {
++            int[] in = new int[15];
++            in[0] = state;
++            data.writeInterfaceToken(DESCRIPTOR);
++            data.writeInt(GROUP_PROXIMITY);
++            data.writeInt(CMD_SCREEN_OFF_WAKELOCK);
++            data.writeInt(0);
++            data.writeIntArray(in);
++            b.transact(TRANSACTION_EXEC_SYNC_INT_INT, data, reply, 0);
++            reply.readException();
++            Slog.i(TAG, "proximity screen-off wake lock " + (state == ACQUIRED ? "held" : "released"));
++        } catch (RemoteException | RuntimeException e) {
++            Slog.w(TAG, "sensor extension call failed", e);
++        } finally {
++            reply.recycle();
++            data.recycle();
++        }
++    }
++}
+-- 
+2.56.0
+

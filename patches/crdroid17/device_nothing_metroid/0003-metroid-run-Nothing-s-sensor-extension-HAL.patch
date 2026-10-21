@@ -1,0 +1,85 @@
+From c0ba1f7e376a784b30086d488c536c2250daf3c7 Mon Sep 17 00:00:00 2001
+From: hasan <gungorbzk@gmail.com>
+Date: Wed, 21 Oct 2026 21:00:57 +0300
+Subject: [PATCH] metroid: run Nothing's sensor extension HAL
+
+The stock vendor service was installed and declared but never started: no
+SELinux domain. It is how the system tells the sensor hub that a call holds
+the proximity screen-off wake lock; without it the under-display proximity
+sensor stops measuring with the panel off and the screen stays off after the
+phone leaves the ear. Domain, service and file labels follow the stock policy
+(QMI to the sensor hub over qipcrtr); system_server is its client.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ sepolicy/vendor/attributes              |  3 +++
+ sepolicy/vendor/file_contexts           |  1 +
+ sepolicy/vendor/hal_sensor_extension.te | 16 ++++++++++++++++
+ sepolicy/vendor/service.te              |  1 +
+ sepolicy/vendor/service_contexts        |  1 +
+ 5 files changed, 22 insertions(+)
+ create mode 100644 sepolicy/vendor/hal_sensor_extension.te
+
+diff --git a/sepolicy/vendor/attributes b/sepolicy/vendor/attributes
+index a15b985..5e6fdbc 100644
+--- a/sepolicy/vendor/attributes
++++ b/sepolicy/vendor/attributes
+@@ -1,3 +1,6 @@
+ attribute vendor_hal_noth_charge;
+ attribute vendor_hal_noth_charge_client;
+ attribute vendor_hal_noth_charge_server;
++attribute vendor_hal_noth_sensor_extension;
++attribute vendor_hal_noth_sensor_extension_client;
++attribute vendor_hal_noth_sensor_extension_server;
+diff --git a/sepolicy/vendor/file_contexts b/sepolicy/vendor/file_contexts
+index 0777db9..eb07d4a 100644
+--- a/sepolicy/vendor/file_contexts
++++ b/sepolicy/vendor/file_contexts
+@@ -94,3 +94,4 @@
+ 
+ # Sensors multihal with the touch driver sensors
+ /vendor/bin/hw/android\.hardware\.sensors-service\.nothing-multihal      u:object_r:hal_sensors_default_exec:s0
++/(vendor|system/vendor)/bin/hw/vendor\.noth\.hardware\.sensor\.sensor_extension-service u:object_r:vendor_sensor_extension_default_exec:s0
+diff --git a/sepolicy/vendor/hal_sensor_extension.te b/sepolicy/vendor/hal_sensor_extension.te
+new file mode 100644
+index 0000000..3ea7632
+--- /dev/null
++++ b/sepolicy/vendor/hal_sensor_extension.te
+@@ -0,0 +1,16 @@
++# Nothing's sensor extension HAL (vendor.noth.hardware.sensor.sensor_extension). It forwards
++# commands to the sensor hub over QMI; system_server uses it to tell the under-display proximity
++# sensor that a call holds the proximity screen-off wake lock, so it keeps measuring with the
++# panel off (without that the screen never turns back on when the phone leaves the ear).
++type vendor_sensor_extension_default, domain;
++type vendor_sensor_extension_default_exec, exec_type, vendor_file_type, file_type;
++
++init_daemon_domain(vendor_sensor_extension_default)
++binder_use(vendor_sensor_extension_default)
++hal_server_domain(vendor_sensor_extension_default, vendor_hal_noth_sensor_extension)
++hal_attribute_service(vendor_hal_noth_sensor_extension, vendor_hal_noth_sensor_extension_service)
++
++hal_client_domain(system_server, vendor_hal_noth_sensor_extension)
++
++# QMI to the sensor hub, as in the stock policy.
++allow vendor_sensor_extension_default self:qipcrtr_socket { create read write getattr setopt };
+diff --git a/sepolicy/vendor/service.te b/sepolicy/vendor/service.te
+index f9d2825..29af93b 100644
+--- a/sepolicy/vendor/service.te
++++ b/sepolicy/vendor/service.te
+@@ -6,3 +6,4 @@ type vendor_nothing_camera_postproc_service, hal_service_type, protected_service
+ type vendor_goodix_fingerprint_service, hal_service_type, protected_service, service_manager_type;
+ type vendor_nothing_ntcam_service, hal_service_type, protected_service, service_manager_type;
+ type vendor_hal_noth_charge_service, hal_service_type, protected_service, service_manager_type;
++type vendor_hal_noth_sensor_extension_service, hal_service_type, protected_service, service_manager_type;
+diff --git a/sepolicy/vendor/service_contexts b/sepolicy/vendor/service_contexts
+index c558a97..ba57646 100644
+--- a/sepolicy/vendor/service_contexts
++++ b/sepolicy/vendor/service_contexts
+@@ -2,3 +2,4 @@ com.nothing.camera.postproc.IPostProcService/default u:object_r:vendor_nothing_c
+ vendor.goodix.hardware.biometrics.fingerprint.IGoodixFingerprintDaemon/default u:object_r:vendor_goodix_fingerprint_service:s0
+ vendor.noth.hardware.camera.INtCamService/default u:object_r:vendor_nothing_ntcam_service:s0
+ vendor.noth.hardware.charge.ICharge/default u:object_r:vendor_hal_noth_charge_service:s0
++vendor.noth.hardware.sensor.sensor_extension.ISensorExtension/default u:object_r:vendor_hal_noth_sensor_extension_service:s0
+-- 
+2.56.0
+
